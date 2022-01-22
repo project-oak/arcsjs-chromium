@@ -1,0 +1,44 @@
+<!doctype html>
+<!--
+ Copyright (c) 2022 Google LLC All rights reserved.
+ Use of this source code is governed by a BSD-style
+ license that can be found in the LICENSE file.
+-->
+
+<html lang="en">
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.86, maximum-scale=3.0, minimum-scale=0.86, viewport-fit=cover">
+
+<!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src https://*; frame-src 'self';"> -->
+
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  body > * {
+    flex: 1;
+  }
+</style>
+
+<script type="module">
+  globalThis.config = {
+    aeon: 'local-photos/00x00',
+    logFlags: {
+      //arc: true,
+      recipe: true,
+      host: true,
+      particles: true,
+      surfaces: true
+    }
+  };
+</script>
+
+<script type="module" src="./app.js"></script>
+
+</html>
