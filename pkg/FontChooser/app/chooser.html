@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
  Copyright 2022 Google LLC
- 
+
  Use of this source code is governed by a BSD-style
  license that can be found in the LICENSE file or at
  https://developers.google.com/open-source/licenses/bsd
@@ -29,22 +29,7 @@
   }
 </style>
 
-<script type="module">
-  globalThis.config = {
-    // identifies the p2p meeting place, peers must be in this same aeon
-    // also coincidentally identifies where offline storage is
-    aeon: 'local-fonts/00x00',
-    // TODO(wkorman): Understand and document each of below (and aeon).
-    logFlags: {
-      recipe: true,
-      host: true,
-      decorator: true,
-      particles: true,
-      surfaces: true
-    }
-  };
-</script>
-
-<script type="module" src="./app.js"></script>
+<script src="./config.js" type="module"></script>
+<script src="./app.js" type="module"></script>
 
 </html>
