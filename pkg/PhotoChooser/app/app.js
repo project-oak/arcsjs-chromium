@@ -1,12 +1,12 @@
 /**
  * Copyright 2022 Google LLC
- * 
+ *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-import {Runtime, Params, Chef, Decorator, Surfaces, Services, logFactory, pathForKind} from '../../arcs.js';
+import {Runtime, Params, Chef, Decorator, Surfaces, Services, logFactory, pathForKind} from '../../arcs-import.js';
 import {ExifService, EXIF_MSG} from './ExifService.js';
 
 // logger
