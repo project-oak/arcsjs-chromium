@@ -40,7 +40,7 @@ export const Basic = {
   user: async (runtime, host, request) => {
     switch (request.msg) {
       case 'particle-error': {
-        //console.error(error);
+        log.error(error);
       }
     }
   }
