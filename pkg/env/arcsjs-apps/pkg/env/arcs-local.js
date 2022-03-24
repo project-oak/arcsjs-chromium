@@ -7,4 +7,4 @@
  */
 
 // local
-export * from '../../../arcsjs-core/pkg/arcs.js'
+export * from '../../../arcsjs-core/pkg/arcs.min.js'
