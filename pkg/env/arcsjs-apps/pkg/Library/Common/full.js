@@ -1,12 +1,12 @@
 /**
  * @license
- * Copyright 2021 Google LLC.
- * This code may only be used under the BSD style license found at
- * http://polymer.github.io/LICENSE.txt
- * Code distributed by Google as part of this project is also
- * subject to an additional IP rights grant found at
- * http://polymer.github.io/PATENTS.txt
+ * Copyright 2022 Google LLC
+ *
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file or at
+ * https://developers.google.com/open-source/licenses/bsd
  */
+
 export * from './common.js';
 export * from './shell/network.js';
 export * from './shell/login.js';
