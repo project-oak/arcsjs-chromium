@@ -1,16 +1,20 @@
 {
   "name": "chromium-arcsjs",
-  "author": "sjmiles@google.com",
+  "author": "cromwellian@google.com",
   "type": "module",
   "license": "ISC",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "glitch-server.js",
   "engines": {
     "node": ">=14.0.0"
   },
   "devDependencies": {
     "local-web-server": "^4.2.1"
+  },
+  "dependencies": {
+    "fastify": "^3.27.4",
+    "fastify-static": "^4.6.1"
   },
   "scripts": {
     "fdeploy": "./tools/fdeploy.sh",
@@ -18,7 +22,8 @@
     "gpush": "./tools/gpush.sh",
     "get_port": "node ./tools/get_port.js",
     "serve": "./tools/serve.sh",
-    "shutdown": "/tools/shutdown.sh"
+    "shutdown": "/tools/shutdown.sh",
+    "start": "node glitch-server.js"
   },
   "config": {
     "port": "9876"
