@@ -2,7 +2,12 @@ import {FontChooser} from '../../FontChooser/FontChooser.js';
 import {fonts} from './CustomFontSet.js';
 
 // we need an absolute url to the location of the local library
-const local = `${window.location.href}Library`;
+let local = `${window.location.href}`;
+if (local.endsWith('.html')) {
+  local = local.substring(0, local.lastIndexOf('/') + 1);
+}
+
+local = local + 'Library';
 
 // express button state
 const {b0, e1, e2, e3, e4, e5, e6, e7, e8, e9} = window;
