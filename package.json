@@ -5,7 +5,7 @@
   "license": "ISC",
   "version": "0.0.0",
   "description": "",
-  "main": "glitch-server.js",
+  "main": "server.js",
   "engines": {
     "node": ">=14.0.0"
   },
@@ -23,7 +23,7 @@
     "get_port": "node ./tools/get_port.js",
     "serve": "./tools/serve.sh",
     "shutdown": "/tools/shutdown.sh",
-    "start": "node glitch-server.js"
+    "start": "node server.js"
   },
   "config": {
     "port": "9876"
