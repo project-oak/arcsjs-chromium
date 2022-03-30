@@ -7,7 +7,7 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/pkg/demo/explainer/Library`;
+const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 const BoldFonts = {
   $kind: '$local/3-FilterBold',
