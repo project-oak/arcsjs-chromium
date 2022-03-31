@@ -4,7 +4,7 @@ This is a prototype implementation of a Picker API for Chrome that would allow
 permission-less access to fingerprintable resources while being extensible, and
 fingerprint resistant.
 
-![](fulldemo.png)
+![](https://github.com/project-oak/arcsjs-chromium/raw/main/pkg/demo/explainer/fulldemo.png)
 
 [Live Demo](fulldemo.html)
 
@@ -28,7 +28,7 @@ only be modifying **Recipes** to customize the system.
 As a demonstration of flexibility, below is a screenshot of a Lightroom-style
 photo picker built using the same techniques.
 
-![](photodemo.png)
+![](https://github.com/project-oak/arcsjs-chromium/edit/main/pkg/demo/explainer/photodemo.png)
 
 ## The Host Page
 
