@@ -1,3 +1,6 @@
 .DS_Store
 .firebase
 node_modules
+*.iml
+*.iws
+*.ipr

@@ -1,6 +1,6 @@
 [![Remix on Glitch](https://cdn.glitch.com/2703baf2-b643-4da7-ab91-7ee2a2d00b5b%2Fremix-button.svg)](https://glitch.com/edit/#!/import/github/project-oak/arcsjs-chromium)
 
-## Secure Font Picker using WebArcs
+## Secure Font Picker using ArcsJs
 
 This is a prototype implementation of a Picker API for Chrome that would allow
 permission-less access to fingerprintable resources while being extensible, and
@@ -80,7 +80,7 @@ and write externally. We'll loop back and explain it in more detail later.
 Instead, let's examine the meat of the simplest font picker, the `LocalFonts.js`
 file which is referenced by `LocalFontsRecipe.js`.
 
-The WebArcs system refers to code it loads from recipes as **_Particles_** and
+The ArcsJs system refers to code it loads from recipes as **_Particles_** and
 in the font picker system, we use a special variant of these called a **_
 Non-Permissive Particle_**. The key difference is that a non-permissive particle
 is just a JSON dictionary of pure functions, it cannot define classes, or top
@@ -360,10 +360,10 @@ decorator(modelItem, inputs, state)
 
 `modelItem` is the list of font metadata fields provided by the underlying local
 fonts (or web fonts). `inputs` and `state`
-are specific to the *WebArcs* system. _Inputs_ are data provided by a WebArcs _
+are specific to the *ArcsJs* system. _Inputs_ are data provided by a ArcsJs _
 Store_ connected to your Particle by the _Recipe_. `state` is an object
-maintained by the WebArcs system that allows you to store and reference global
-data. The WebArcs system is reactive, so anytime `inputs` or `state` changes,
+maintained by the ArcsJs system that allows you to store and reference global
+data. The ArcsJs system is reactive, so anytime `inputs` or `state` changes,
 your particle is re-executed to update the UI.
 
 Ordinarily, `state` is globally mutable and readable, however this would be
@@ -533,7 +533,7 @@ its [recipe definition](Library/7-PerItemUiStateRecipe.js).
 
 ## Composition
 
-One of the core principles of WebArcs is composition, that is, computations can
+One of the core principles of ArcsJs is composition, that is, computations can
 be broken up into a graph of particles, connected by bindings specified in a
 recipe. This explicit dataflow provides a safety mechanism wherein all of the
 data that one particle can read from another can be defined by a policy in the
@@ -620,7 +620,7 @@ For now, let's utilize a pre-existing service that's been written for us. The
 simplest service to use is Geo-Location, which we will use to pick suggested
 fonts based on your geo-location.
 
-Services in WebArcs are based on *asynchronous message passing*. You may send an
+Services in ArcsJs are based on *asynchronous message passing*. You may send an
 arbitrary JSON object to a service, specified by a `kind` field of the name of
 the service, and usually by convention a `msg` field specifying the name of the
 method on the service you'd like to invoke, which returns a `Promise` that is
@@ -656,31 +656,31 @@ its [recipe definition](Library/9-ServicesRecipe.js).
 
 ## Other Topics
 
-The complete runtime behind the picker, *WebArcs*, offers far more powerful
-idioms for computing not discussed or exposed here. WebArcs has an underlying
+The complete runtime behind the picker, *ArcsJs*, offers far more powerful
+idioms for computing not discussed or exposed here. ArcsJs has an underlying
 storage system based on CRDTs, it is not browser/DOM specifics and abstracts
 away rendering surfaces to support arbitrary device outputs, and it includes a
 privacy policy model for verifying data flows in recipes. These mechanisms open
-up additional integration points for applications, like tying WebArcs Stores to
+up additional integration points for applications, like tying ArcsJs Stores to
 application stores or native browser stores. Custom surfaces could be used in
 applications that might need to control rendering in custom ways, like a font
 editor that needed to display actual font outlines. The sky's the limit.
 
 # Appendix: Q&A
 
-## Why WebArcs?
+## Why ArcsJs?
 
-You may be asking, what's all this WebArcs stuff and why are we using it,
+You may be asking, what's all this ArcsJs stuff and why are we using it,
 instead of just handling the user a simple library function or custom web
 element.
 
-The WebArcs team has been exploring computing concepts around composing
+The ArcsJs team has been exploring computing concepts around composing
 untrusted third party code safety via application of privacy policies, dataflow
 analysis, and isolation mechanisms. We have an existing codebase that enables us
 to rapidly prototype solutions like those shown here with the appropriate
 security properties needed.
 
-While it is true that a simpler API could be built on top of WebArcs to hide it
+While it is true that a simpler API could be built on top of ArcsJs to hide it
 from the end user, it would also hide some of the power available. Since we
 don't know yet how much flexibility various vendors may desire, this explainer
 documents the stack is greater detail.
@@ -688,11 +688,11 @@ documents the stack is greater detail.
 However, it is not required that all this complexity is exposed, and a simpler
 wrapper can be designed, depending on what partners want.
 
-## What security guarantees does WebArcs provide?
+## What security guarantees does ArcsJs provide?
 
 ### Isolation
 
-WebArcs isolates both Javascript and UI.
+ArcsJs isolates both Javascript and UI.
 
 Javascript is run in a locked down environment with most capabilities removed,
 with defense in depth. The initial layer can be run inside of an IFRAME or a
@@ -713,7 +713,7 @@ each other has rendered.
 
 ### Dataflow Analysis and Privacy Policy Enforcement
 
-There is ongoing research in the WebArcs team on reasoning about dataflow graphs
+There is ongoing research in the ArcsJs team on reasoning about dataflow graphs
 and providing policy enforcement, some of this is deployed in Android already.
 What this means is that particle outputs might have claims or types associated
 with them, and after they are assembled in a dataflow graph, the system may
@@ -731,12 +731,12 @@ common-font egress property.
 See [Raksha](https://github.com/google-research/raksha) for bleeding edge
 research in progress.
 
-# Appendix: WebArcs Concepts Reference
+# Appendix: ArcsJs Concepts Reference
 
 ## Particles
 
-Particles are the foundation of WebArcs - understanding how to use and work with
-them is critical to developing projects with WebArcs. To begin, we present the
+Particles are the foundation of ArcsJs - understanding how to use and work with
+them is critical to developing projects with ArcsJs. To begin, we present the
 following definition of a particle.
 
 > Particle - Modular component of functionality that is run in isolation.
@@ -770,15 +770,15 @@ definition of a recipe below.
 > Recipe - a description of components that allows for instantiation.
 
 Within a recipe, particle inputs/outputs are declared and stores are defined.
-This allows WebArcs to instantiate your project and connect the correct stores
+This allows ArcsJs to instantiate your project and connect the correct stores
 to particles.
 
 ## Surfaces
 
-Surfaces allow for interaction (input/output) between WebArcs and the real
+Surfaces allow for interaction (input/output) between ArcsJs and the real
 world. We present a definition of a surface below.
 
-> Surface - a primitive WebArcs component that can render audio/visual and map
+> Surface - a primitive ArcsJs component that can render audio/visual and map
 > inputs from sensors.
 
 Surfaces can be run on different devices (phone, watch, smart speaker, etc.) and
@@ -790,7 +790,7 @@ they are not required to have one.
 
 ## Slots
 
-Slots allow WebArcs components to delegate functionality. We present a
+Slots allow ArcsJs components to delegate functionality. We present a
 definition of slots below.
 
 > Slots are locations where particles or surfaces can be connected.
