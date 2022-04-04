@@ -8,7 +8,7 @@ fingerprint resistant.
 
 ![](https://project-oak.github.io/arcsjs-chromium/demo/explainer/fulldemo.png)
 
-[Live Demo](fulldemo.html)
+[Live Demo](https://project-oak.github.io/arcsjs-chromium/demo/explainer/fulldemo.html)
 
 The general mechanism for achieving our goal of non-fingerprintability is to
 restrict the code that is processing the list of fonts:
@@ -16,7 +16,7 @@ restrict the code that is processing the list of fonts:
 * Only one font can ever be seen by the code at a time
 * The code is pure functional, can only receive inputs and return outputs, with
   no access to writable global state permitted
-* Rendering is done via **Xen** templates, no access to DOM is permitted.
+* Rendering is done via templates, no access to DOM is permitted.
 * Only a single datum, the selected font, may be returned to the host page.
 
 Despite those restrictions, font pickers can be built with rich functionality
@@ -42,7 +42,7 @@ element into which the IFRAME containing the font chooser will be rendered, e.g.
 <div id="chooser"></div>
 ```
 
-[See index.html example](index.html)
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/index.html" target="_demo">See index.html example</a>
 
 Next you create an `app.js` file (or a name of your liking), which sets up the
 request for the picker, and invokes it when desired. A picker request is
@@ -70,7 +70,7 @@ const FamilyRequest = {
 **Note**: The `${local}` variable is just a JS variable defined in the recipe
 file
 
-[See app.js example](app.js)
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/app.js" target="_demo">See app.js example</a>
 
 ## Recipes and Particles
 
@@ -103,7 +103,7 @@ We can make this look nicer with ES6 format:
 ```
 
 The minimum `Particle` for a font picker must specify a `render` function and
-a **_Xen_** `template` variable. Here's an example of the simplest possible
+a `template` variable. Here's an example of the simplest possible
 local font picker.
 
 ```
@@ -133,12 +133,12 @@ The `render` function is given an opaque reference to a list of fonts. This is
 not an object you can iterate or inspect, it is simply passed around the system
 and expanded internally by the runtime as needed. The goal of the render
 function is to return an object which associates these opaque `fonts` handles
-to _Xen_ templates for rendering. In the example above, we return an object with
+to templates for rendering. In the example above, we return an object with
 a key called `myfonts` with two properties: `models` and `$template`. _Models_
 points to the input `fonts` opaque reference, and `$template` refers to a
-_Xen_ `<template>` element which will be stamped down for each font in the
+`<template>` element which will be stamped down for each font in the
 input. The `<div>{{myfonts}}</div>` triggers the application of the template to
-the opaque font list. (_Note_ that in _Xen__, double curly brace `{{x}}` is
+the opaque font list. (_Note_ that in templates, double curly brace `{{x}}` is
 template interpolation.)
 
 However, there's something missing in the above example. Where do `{{name}}`
@@ -201,8 +201,9 @@ render({fonts}) {
 is pure, it cannot reference global variables, including other functions in the
 file.
 
-[See a Simple Decorator example](Library/2-SimpleDecorator.js) and
-its [recipe definition](Library/2-SimpleDecoratorRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/2-SimpleDecorator.js" target="_demo">See a Simple Decorator example</a>
+and
+its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/2-SimpleDecoratorRecipe.js" target="_demo">recipe definition</a>.
 
 ## Filtering
 
@@ -231,21 +232,22 @@ render({fonts}) {
 },
 ```
 
-[See the FilterBold example](Library/3-FilterBold.js) and
-its [recipe definition](Library/3-FilterBoldRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/3-FilterBold.js" target="_demo">See a FilterBold example</a>
+and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/3-FilterBoldRecipe.js" target="_demo">recipe definition</a>
+
 
 ## Event Handling
 
 So far we can take an opaque reference to a list of fonts, apply decoration,
 filtering, and rendering, but we cannot interact. The final piece of the puzzle
-is to use _Xen_ event handlers to allow a font to be clicked on and returned to
+is to use event handlers to allow a font to be clicked on and returned to
 the _host page_.
 
-A _Xen_ _event handler_ is just a function referenced by special attributes in a
+An _event handler_ is just a function referenced by special attributes in a
 template. These attributes always begin with `on-` with a suffix corresponding
 to a typical _DOM UI Event_ name.
 
-The difference between event handling in _Xen_ and in regular Web applications
+The difference between event handling in our templates and in regular Web applications
 is that the DOM event data is scrubbed, and you are given an `eventlet` and
 a `key` or `value` of your own choice supplied in the template. Let's look at a
 simple example:
@@ -274,8 +276,9 @@ the name of the font you clicked on.
 **Note**: If an event handler returns a value, this ends the choosing process,
 the chooser is closed, and control of returned to the _Host Page_.
 
-[See the EventHandling example](Library/4-EventHandling.js) and
-its [recipe definition](Library/4-EventHandlingRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/4-EventHandling.js" target="_demo">See the EventHandling example</a>
+and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/4-EventHandlingRecipe.js" target="_demo">recipe definition</a>.
+
 
 ## Collation
 
@@ -340,8 +343,9 @@ Sans'. Then it invokes template
 sans fonts, or all the not sans fonts. You can specify which template to use
 either in the `render` function, or by a special `repeat` attribute shown here.
 
-[See the Collation example](Library/5-Collation.js) and
-its [recipe definition](Library/5-CollationRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/5-Collation.js" target="_demo">See the Collation example</a> and
+its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/5-CollationRecipe.js" target="_demo">recipe definition</a>.
+
 
 # Advanced Functionality
 
@@ -422,8 +426,9 @@ initialize({}, state) {
   },
 ```
 
-[See the UI State example](Library/6-UIState.js) and
-its [recipe definition](Library/6-UIStateRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/6-UIState.js" target="_demo">See a UI State example</a> and
+its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/6-UIStateRecipe.js" target="_demo">recipe definition</a>.
+
 
 ## Per-Item Mutable UI State
 
@@ -528,8 +533,9 @@ object passed in to be mutable during an event handler. Most likely, we will
 change this to allow the event handler to somehow return a *new* privateData
 object.
 
-[See the Per Item UI State example](Library/7-PerItemUiState.js) and
-its [recipe definition](Library/7-PerItemUiStateRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/7-PerItemUiState.js" target="_demo">See the Per Item UI State example</a> and 
+its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/7-PerItemUiStateRecipe.js" target="_demo">recipe definition</a>.
+
 
 ## Composition
 
@@ -593,8 +599,9 @@ into. Thus in a composed ecosystem of untrusted third party particles, UI
 component data sharing is strictly controlled by the dataflow graph in the
 recipe and any policies or restrictions imposed on it.
 
-[See the Slots example](Library/8-Slots.js) and
-its [recipe definition](Library/8-SlotsRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/8-Slots.js" target="_demo">See the Slots example</a>
+and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/8-SlotsRecipe.js" target="_demo">recipe definition</a>.
+
 
 ## Breaking out of the Container
 
@@ -606,7 +613,7 @@ like *Tensorflow*. The Photo Picker prototype for example, uses a service to
 read _EXIF_ metadata from an image for display.
 
 _Custom Elements_ are normally used when you need rendering power not provided
-by _Xen_. Examples of this include rendering to Canvas or WebGL, or using third
+by builtin template markup. Examples of this include rendering to Canvas or WebGL, or using third
 party custom elements that might encapsulate things like embedded YouTube
 players, Maps, etc.
 
@@ -651,8 +658,8 @@ to a locale (eg San Francisco font for San Francisco, or Chinese fonts if you
 are located in China.)
 
 **_Under Construction_**
-[See the Slots example](Library/9-Services.js) and
-its [recipe definition](Library/9-ServicesRecipe.js).
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/9-Services.js" target="_demo">See the Services example</a>
+and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/9-ServicesRecipe.js" target="_demo">recipe definition.</a>
 
 ## Other Topics
 
@@ -702,7 +709,7 @@ Javascript to consider of only pure-top level functions, with no capability to
 mutate global state.
 
 Likewise, for UI, there are layers of protection. All UI rendering is done
-through the *Xen* template system, with no access given to things like DOM, and
+through the template system, with no access given to things like DOM, and
 no direct access to events. Surfaces are isolated through both IFRAMEs and
 ShadowDom layers. Additional filtering may also be done to limit what elements
 and/or CSS can be used.
@@ -798,3 +805,4 @@ definition of slots below.
 Within a recipe, slots allow components like particles to provide space for
 other components. This could be used when a particle wants to have another
 surface render or to bring in another recipe with additional functionality.#
+
