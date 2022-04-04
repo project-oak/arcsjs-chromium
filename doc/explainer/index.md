@@ -18,7 +18,7 @@ The [Local Font Access API](https://chromestatus.com/feature/6234451761692672) i
 
 The Arcs and [Fugu](https://www.chromium.org/teams/web-capabilities-fugu/) teams at Google are exploring a possible solution to this problem in the form of a lightweight, privacy-preserving JS-based framework called [ArcsJs](https://g3doc.corp.google.com/knowledge/cerebra/arcs/g3doc/webarcs/index.md?cl=head). Small components[^1] are written in JS with their data inputs and outputs explicitly specified. Components can be connected together in a graph with optional support for framework-controlled rendering via a virtual DOM and an abstract notion of rendering surfaces. Points of data egress are explicitly specified. Components are run in isolation. The Raksha [policy specification and enforcement system](https://github.com/google-research/raksha) can allow defining and validating constraints that should be present in the graph. All portions of this including the framework, policies, and components are intended to be open source for transparency, inspectability, and improvement.
 
-Calling out further a point made above – a key aspect of the proposal is that web developers do not have direct access to the DOM when using functionality built with this framework. Instead, the framework manages both the components (which, VDOM-style, can output for rendering (a) model data, and (b) a template with a subset of html) and the rendering surfaces (e.g. iframes, windows, or even other devices, though that is outside the scope of this proposal). There is framework-managed support for components to bind to and interact with surface events.
+Calling out further a point made above – a key aspect of the proposal is that web developers do not have direct access to the DOM when using functionality built with this framework. Instead, the framework manages both the components (which, VDOM-style, can output for rendering (a) model data, and (b) a template with a subset of html) and the rendering surfaces (e.g. iframes, windows, or even other devices, though that is outside the scope of this proposal). There is framework-managed support for components to bind to and interact with surface events. Events returned to isolated components only contain minimal information and do not reveal e.g. where on the screen the element was rendered. The goal is to approximate a "write-only" DOM, such that a component can at most (through events) read back information it originally submitted. This is to prevent a component from crossing the DOM or reading computed values, as these could allow indirectly communicating with other components.
 
 For application to the Local Font Access API, the framework is intended to be treated by the browser as a “trusted” component. Browser engineers would write and code-review a small set of “trusted” JS components. Web developers would then write one or more JS components themselves, to provide for app-specific customization. This allows _structuring browser-provided API logic so as to minimize fingerprinting risk while still allowing for developer customization_.
 
@@ -26,7 +26,7 @@ A layer diagram could look something like:
 
 ![ArcsJs Layer Sketch](./layers.svg)
 
-The component written by the web developer would only see one font at a time for purposes of ranking and rendering. The framework aims to prevent any accrual of font info while iterating across fonts. There is a facility for the developer to pass in app-provided font-specific metadata to allow for things like user-favorited fonts managed, persisted, and so forth by the application. A policy can specify that the only inputs to the web developer’s component are a single font from the set of local fonts, and that the only data egress from the overall graph is the single font picked by the user.
+ A policy specifies that the only data egressed is the single font picked by the user and that each font has to be independently scored or filtered. The component written by the web developer only sees one font at a time for purposes of ranking and rendering. The framework enforces the policy, thus preventing any accrual of font info while iterating across fonts. There is a facility for the developer to pass in app-provided font-specific metadata to allow for things like user-favorited fonts managed, persisted, contextually ranked, and so forth by the application. 
 
 Although returning the single picked font in full to the web developer can still lead to fingerprinting, e.g. if the font is a known corporate-specific font, the intent is that the overall scope and volume of data exposure, and thus fingerprinting risk, is reduced.
 
@@ -34,7 +34,7 @@ We believe it is possible to extend this approach to similarly improve on finger
 
 Considering the existing browser-provided UI picker patterns, they do work in reducing fingerprinting risk. It can therefore be tempting to just continue adding more API-specific browser UI pickers as needed, and consider alternate ways to allow styling. However, apart from the intrusive end-user workflow noted earlier, (a) this puts an ongoing development burden on the browser vendors, (b) the feedback loop with developers may be slow, and (c) the styling support may have limited flexibility.
 
-The proposal here aims at a middle ground: developers would get a lot more flexibility. There will still be some styling and functionality constraints, but when encountered, they can work with browser vendors to add or improve trusted components to support their use case. These can be designed in a way that ideally serves many more developers for even more use cases.
+The proposal here aims at a middle ground: developers would get a lot more flexibility. There will still be some styling and functionality constraints, but when encountered, they can work with browser vendors to add or improve trusted components to support their use case. These can be designed in a way that ideally serves many more developers for even more use cases. An explicit goal is to make that UI feel like a natural part of the application's UI, as opposed to system UI.
 
 In a manner that is perhaps similar to the way that Houdini allows browser vendors to put more power directly into the hands of web developers to customize things like component layout and paint, this proposal could do the same for pickers and other APIs at risk of fingerprinting concerns. This would be achieved via, essentially, a browser-hosted policy-preserving managed component graph, with hooks allowing for developer customization.
 
@@ -45,7 +45,9 @@ One can start by thinking of the proposal as if the font API provided an opaque 
 
 These existing web primitives restrict what can be done by the application developer without eliminating the ability to act based on the content.
 
-A developer using the font API could write code that issues `navigator.fonts.query()`, which returns an opaque handle, which it passes to the browser-hosted framework-powered picker. The picker is allowed to see the data and does so in a safe way, and returns a single font (no longer opaque) from that list. 
+A developer using the font API could write code that issues `navigator.fonts.query()`, which returns an opaque handle, which it passes to the browser-hosted framework-powered picker.
+
+The policy outlined above is attached to the opaque handle. The picker is allowed to see the data as long as it is compliant with the policy, and if so it returns a single font (no longer opaque) from that list.
 
 
 ```
@@ -61,7 +63,7 @@ The first few steps described can be further moved to become browser/framework-i
 
 ```
 const pickedFont = navigator.fonts.pick(
-    <custom JS component url>, <optional per-font metadata>);
+    <custom JS component url>, <app font metadata>);
 ```
 
 
@@ -77,7 +79,7 @@ That said, it is unavoidably a different, more restrictive style of development 
 
 ## Community Engagement and Experimentation
 
-In the spirit of the [Extensible Web Manifesto](https://github.com/extensibleweb/manifesto), we would like to engage with the open web community via WICG or similar to consider the fingerprinting problem in both the Local Font Access API specific use case and a broader set of relevant API use cases. The intent is to explore both the approach described above along with any others raised by the community.
+In the spirit of the [Extensible Web Manifesto](https://github.com/extensibleweb/manifesto), we would like to engage with the open web community via WICG or similar to consider this approach to address the fingerprinting problem generally, with the Local Font Access API as a specific example, and with others following a similar opaque handle with attached policy pattern. The intent is to explore both the approach described above along with any others raised by the community.
 
 In parallel, we are interested in exploring whether/when there is a suitable method to experiment with this approach in Chromium/Blink via flag, origin trial, or similar. Though we can experiment in the open without this, a key value proposition of the proposal is the framework itself being “trusted”, allowing the browser to relax the requirement for a user-facing system picker permission prompt UI gating local font data access. Achieving this requires some form of browser integration beyond what is exposed via open web APIs today. The closest we believe we can get in the open today is to ask both developers and end-users to enable the existing Local Font Access API flags in specific Chrome versions and accept the one-time domain-specific permission prompt. We have [a demo of this approach](https://glitch.com/edit/#!/arcs-font-playground), including [a sample component](https://glitch.com/edit/#!/arcs-font-playground?path=Library%2FLocalFonts.js%3A1%3A0) the developer would write.
 
@@ -87,16 +89,18 @@ In parallel, we are interested in exploring whether/when there is a suitable met
 
 ### Isolation
 
-The specifics of how component isolation is achieved are flexible and open to discussion and evolution. We’ve experimented with both web workers and [SES](https://github.com/endojs/endo/tree/master/packages/ses)[^2]. Related efforts include [Fenced Frames](https://chromestatus.com/feature/5699388062040064) and [Shadow Realms](https://github.com/tc39/proposal-shadowrealm). We intend to explore these further with the involved communities. We’re aware that best practices to mitigate side channel attacks frequently default to full process isolation. ArcsJs can use isolation in such a manner, should it be determined to be a requirement. It is understood that full process isolation can be a prohibitive cost for some use cases and platforms, e.g. due to latency or system resource overhead.
+The specifics of how component isolation is achieved are flexible and open to discussion and evolution. Our approach requires making many small isolation containers, e.g. one per font when invoking the ranking function.
+
+We’ve experimented with both web workers and [SES](https://github.com/endojs/endo/tree/master/packages/ses)[^2]. Related efforts include [Fenced Frames](https://chromestatus.com/feature/5699388062040064) and [Shadow Realms](https://github.com/tc39/proposal-shadowrealm). We intend to explore these further with the involved communities. We’re aware that best practices to mitigate side channel attacks frequently default to full process isolation. ArcsJs can use isolation in such a manner, should it be determined to be a requirement. It is understood that full process isolation can be a prohibitive cost for some use cases and platforms, e.g. due to latency or system resource overhead.
 
 We have explored the use of WebAssembly for finer-grained lighter weight isolation. While this is beyond the scope of what is considered in this proposal, in addition to the obvious benefit of multi-language component support, Wasm may have the potential to enable use cases that have more components, lower latency needs, and so forth in the future.
 
-We have work underway to explore covert channel attacks and mitigations in the open with a research-oriented test bed, to inform our isolation approaches and to better understand risk levels and tradeoffs.
+Beyond ensuring isolation of components, we have to consider covert channels between the hosting webpage and colluding untrusted components. We have work underway to explore such covert channel attacks and mitigations in the open with a research-oriented test bed, to inform our isolation approaches and to better understand risk levels and tradeoffs.
 
 
 ### Standards
 
-Looking ahead, if the ArcsJs-based proposal (or something similar) turns out to make sense, it could benefit from multiple specifications. Examples of things one might want to make pluggable include (a) the privacy-preserving framework itself, (b) the JS component with VDOM-style template rendering (potentially considering each separately), (c) the policy enforcement layer.
+Looking ahead, if the ArcsJs-based proposal (or something similar) turns out to make sense, it could benefit from multiple specifications. Examples of things one might want to make pluggable include (a) isolation primitives, (b) restricting DOM reads (to replace the VDOM-style template rendering), (c) policy enforcement, and (d) the privacy-preserving framework itself.
 
 There are a number of existing and proposed relevant technologies and specifications. We mentioned Fenced Frames and Shadow Realms previously in the context of isolation. Web Components, perhaps with some modifications, could be relevant for constraining DOM access. Intersection Observer could be relevant to ensure rendered UI visibility.
 
