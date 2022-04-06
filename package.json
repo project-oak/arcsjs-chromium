@@ -18,8 +18,6 @@
   },
   "scripts": {
     "fdeploy": "./tools/fdeploy.sh",
-    "gpull": "./tools/gpull.sh",
-    "gpush": "./tools/gpush.sh",
     "get_port": "node ./tools/get_port.js",
     "serve": "./tools/serve.sh",
     "shutdown": "/tools/shutdown.sh",
