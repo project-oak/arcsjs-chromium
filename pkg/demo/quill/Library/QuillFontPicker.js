@@ -41,7 +41,7 @@
     return suggested?.indexOf(name) != -1 && name?.toLowerCase().includes(myFilter?.toLowerCase());
   },
 
-  decorator({family, fullName, weight, style}, {suggested}, {searchFilter}) {
+  decorator({family, fullName, weight, style, postscriptName}, {suggested}, {searchFilter}) {
     const fweight = style.includes('Bold') ? 'bold' : weight;
     const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
     return {
@@ -50,6 +50,7 @@
       name: fullName,
       myFilter: searchFilter,
       suggested,
+      postscriptName,
       displayStyle: `font-family: "${family}"; font-weight: ${fweight}; font-style: ${fstyle};`
     };
   },
@@ -133,6 +134,12 @@
 <div scrolling fonts families list repeat="family_t">{{families}}</div>
 
 <template font_t>
+  <style>
+    @font-face {
+      font-family: '{{fullName}}';
+      src: local('{{fullName}}'), local('{{postscriptName}}');
+    }
+  </style>
   <div font toolbar on-click="onFontClick" key="{{key}}">
     <span flex name>{{fullName}}</span>
     <span sample xen:style="{{displayStyle}}">Sample</span>

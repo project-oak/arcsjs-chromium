@@ -77,7 +77,8 @@ class ArcsPicker extends Picker {
       let option = this.select.getElementsByTagName("option")[0];
       const familyName = font.family;
       option.innerHTML = familyName;
-      const familyNameIdent = familyName.toLowerCase();
+      const familyNameIdent = familyName.toLowerCase().replaceAll(' ', '-');
+      const postscriptName = familyName.replaceAll(' ', '-');
       option.setAttribute("value", familyNameIdent);
       const item = this.options.getElementsByTagName("span")[0];
       item.setAttribute("data-label", familyName);
@@ -88,11 +89,12 @@ class ArcsPicker extends Picker {
       const style = document.createElement("style");
       style.innerText = `
                 .ql-font-${familyNameIdent} {
-                  font-family: ${familyName}, sans-serif;
+                  font-family: '${familyName}', sans-serif;
                 }
+                
                 @font-face {
                   font-family: '${familyName}';
-                  src: local('${familyName}');
+                  src: local('${familyName}'), local('${postscriptName}');
                 }`;
       document.head.appendChild(style);
 
