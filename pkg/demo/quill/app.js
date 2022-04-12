@@ -1,19 +1,24 @@
 /**
  * Copyright 2022 Google LLC
- * 
+ *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
 
 import {PhotoChooser} from '../../PhotoChooser/PhotoChooser.js';
+import {FontChooser} from '../../FontChooser/FontChooser.js';
+import {fonts} from '../fonts/CustomFontSet.js';
 
 // we need an absolute url to the location of the local library
-const local = `${import.meta.url.split('/').slice(0, -1).join('/')}/../photos/Library`;
+const localPhoto = `${import.meta.url.split('/').slice(0, -1).join(
+    '/')}/../photos/Library`;
+const localFont = `${import.meta.url.split('/').slice(0, -1).join(
+    '/')}/Library`;
 
-window.choose = async (kind, container, fileSystem, maxPhotos) => {
+window.choosePhoto = async (kind, container, fileSystem, maxPhotos) => {
   const args = {
-    kind: `${local}/${kind}Recipe.js`,
+    kind: `${localPhoto}/${kind}Recipe.js`,
     chooser: window[container],
     fileSystem,
     maxPhotos
@@ -24,7 +29,35 @@ window.choose = async (kind, container, fileSystem, maxPhotos) => {
   // test.src = photo && photo.photoUrl;
 };
 
-const choose = window.choose;
-export { choose };
+window.chooseFont = async (kind, container) => {
+  const args = {
+    kind: `${localFont}/${kind}Recipe.js`,
+    chooser: container,
+    webFonts: fonts,
+    suggested: [
+      'DejaVu Sans Oblique',
+      'DejaVu Sans Bold Oblique',
+      'DejaVu Sans Condensed Oblique',
+      'DejaVu Sans Condensed Bold Oblique',
+      'DejaVu Sans Mono Bold Oblique',
+      'DejaVu Sans Mono Oblique',
+      'Arial',
+      'Futura',
+      'Comic Sans MS',
+      'Papyrus',
+      'Impact',
+      'Chalkduster'
+    ]
+  };
+  const font = await FontChooser.requestFont(args);
+  console.warn('Chosen Font:', font);
+  return font;
+  // test.src = photo && photo.photoUrl;
+};
+
+const choosePhoto = window.choosePhoto;
+const chooseFont = window.chooseFont;
+
+export {choosePhoto, chooseFont};
 
 

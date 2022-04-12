@@ -8,12 +8,15 @@
 
 import {PhotoChooser} from './modules/photochooser.js';
 import {BlobImage} from './formats/blobimage.js';
+import {ArcsTheme} from './themes/arcs.js';
+
 
 Quill.register({
   'modules/photochooser': PhotoChooser,
-  'formats/blobimage': BlobImage
+  'formats/blobimage': BlobImage,
+  'themes/arcs': ArcsTheme
 }, true);
 
 export {
-  PhotoChooser, BlobImage
+  PhotoChooser, BlobImage, ArcsTheme
 }

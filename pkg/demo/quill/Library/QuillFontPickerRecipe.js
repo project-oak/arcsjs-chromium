@@ -8,9 +8,9 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-export const FontsByFamilyRecipe = {
+export const QuillFontPickerRecipe = {
   $meta: {
-    description: 'Full Demo'
+    description: 'Quill Font Picker'
   },
   $stores: {
     fonts: {
@@ -23,14 +23,18 @@ export const FontsByFamilyRecipe = {
     },
     pickedFont: {
       $type: `FontKey`
-    }
+    },
+    suggested: {
+      $type: '[String]',
+    },
   },
 
   main: {
-    $kind: "$local/FullDemo",
+    $kind: "$local/QuillFontPicker",
     $bindings: {
       fonts: 'fonts',
-      pickedFont: 'pickedFont'
+      pickedFont: 'pickedFont',
+      suggested: 'suggested'
     }
   }
 };
