@@ -17,6 +17,11 @@
 
   render({fonts}) {
     return {
+      styles: {
+        models: fonts,
+        decorator
+      },
+
       friends: {
         models: fonts,
         decorator,
@@ -44,6 +49,11 @@
   decorator({family, fullName, weight, style, postscriptName}, {suggested}, {searchFilter}) {
     const fweight = style.includes('Bold') ? 'bold' : weight;
     const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
+    const fontFace =  `@font-face {
+      font-family: '${family}';
+      src: local('${family}'), local('${postscriptName}');
+    }`;
+
     return {
       key: fullName,
       sortKey: family,
@@ -51,6 +61,7 @@
       myFilter: searchFilter,
       suggested,
       postscriptName,
+      fontFace,
       displayStyle: `font-family: "${family}"; font-weight: ${fweight}; font-style: ${fstyle};`
     };
   },
@@ -126,6 +137,8 @@
   }
 </style>
 
+<div repeat="styles_t">{{styles}}</div>
+
 <div search><span>Search: </span><input type="text" on-change="onChange" value="{{searchFilter}}"></div>
 <div head>Suggested</div>
 <div scrolling suggested fonts list repeat="font_t">{{friends}}</div>
@@ -133,13 +146,11 @@
 <div head>All Fonts</div>
 <div scrolling fonts families list repeat="family_t">{{families}}</div>
 
+<template styles_t>
+  <div><style>{{fontFace}}</style></div>
+</template>
+
 <template font_t>
-  <style>
-    @font-face {
-      font-family: '{{fullName}}';
-      src: local('{{fullName}}'), local('{{postscriptName}}');
-    }
-  </style>
   <div font toolbar on-click="onFontClick" key="{{key}}">
     <span flex name>{{fullName}}</span>
     <span sample xen:style="{{displayStyle}}">Sample</span>
