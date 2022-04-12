@@ -24,6 +24,23 @@
   [chooser][show] {
     left: 0;
   }
+
+  [menu] {
+    position: relative;
+    width: 640px;
+    height: 400px;
+    border: 1px solid black;
+    /*border-radius: 8px;*/
+    opacity: 0;
+    transition: opacity 400ms;
+    margin-top: -2px;
+    overflow: visible;
+    z-index: -9999;
+  }
+  [menu][show] {
+    opacity: 1;
+    z-index: 9999;
+  }
 </style>
 <!-- head -->
 </head>
@@ -151,7 +168,6 @@
       var Font = Quill.import('formats/font');
       Font.whitelist = fonts;
       Quill.register(Font, true);
-
       var bubbleEditor = new Quill('#bubble-container .editor', {
         bounds: '#bubble-container .editor',
         modules: {
@@ -167,7 +183,7 @@
           'photochooser': true,
           'toolbar': '#snow-container .toolbar'
         },
-        theme: 'snow'
+        theme: 'arcs'
       });
 
       var fullEditor = new Quill('#full-container .editor', {
@@ -192,7 +208,7 @@
             [ 'clean' ]
           ],
         },
-        theme: 'snow'
+        theme: 'arcs'
       });
 
       var editors = [bubbleEditor, snowEditor, fullEditor];
