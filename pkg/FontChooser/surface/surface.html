@@ -32,10 +32,10 @@
 
 <script type="module">
   // component support
-  import {XenSurface} from './surface/allowlist.js';
+  import {Surface} from './surface/allowlist.js';
   // make a surface (shadowRoot is on)
-  window.surface = new XenSurface(document.body, true);
+  window.surface = new Surface(document.body, true);
   // be heard
-  top.postMessage('surface', '*');
+  window.parent.postMessage('surface', '*');
   console.warn('surface is online');
 </script>

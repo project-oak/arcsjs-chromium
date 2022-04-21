@@ -6,18 +6,17 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-// load helpers
-import {define, loadCss, loadScript} from 'https://arcsjs-apps.web.app/Library/Common/dom/dom.js';
-// Xen (DOM) surface implementation
-export {XenSurface} from 'https://arcsjs-apps.web.app/Library/Common/dom/surfaces/xen/xen-surface.js';
-
-// All of this is for DevTools
-
+// Path discovery
+import {Paths} from '../../arcs-import.js';
+// discover library path
+const dom = Paths.resolve(`$library/Common/dom`);
+// import CSS loader
+const {loadCss} = await import(`${dom}/dom.js`);
+// provide common surface implementation
+export const {XenSurface: Surface} = await import(`${dom}/surfaces/xen/xen-surface.js`);
 // material icon font
-loadCss('https://arcsjs-apps.web.app/Library/Common/dom/material-icon-font/icons.css');
+await loadCss(`${dom}/material-icon-font/icons.css`);
 // Material Web Components
-import 'https://arcsjs-apps.web.app/Library/Common/dom/mwc/mwc.js';
-// more
-import 'https://arcsjs-apps.web.app/Library/Common/dom/material-xen/material-xen.js';
-// other
-import 'https://arcsjs-apps.web.app/Library/Common/dom/arcs-elements/expandable-item.js';
+await import(`${dom}/arcs-elements/expandable-item.js`);
+await import(`${dom}/mwc/mwc.js`);
+await import(`${dom}/material-xen/material-xen.js`);

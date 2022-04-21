@@ -7,6 +7,7 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 import {Runtime, Params, Chef, Decorator, Surfaces, Services, logFactory, pathForKind} from '../../arcs-import.js';
+import {loadIbis, best_solutions_to_json} from 'https://project-oak.github.io/arcsjs-provable/ibis/ibis.js';
 
 // logger
 const log = logFactory(logFactory.flags.app || true, 'App', 'mediumorchid');
@@ -48,13 +49,42 @@ const bootSystem = async (system, recipe, {fontData, suggested}) => {
   if (recipe.$stores.suggested) {
     recipe.$stores.suggested.$value = suggested;
   }
+  const policy = await fetch('./policy.json').then(t => t.text());
+  await loadIbis(
+      'https://project-oak.github.io/arcsjs-provable/ibis/pkg/ibis_bg.wasm',
+      (status_text, style) => {
+        console.log(status_text);
+      },
+      (version_info) => {
+        console.log(version_info);
+      }
+  );
+  const resolved_policy = best_solutions_to_json([policy]);
+  const neededClaims = JSON.parse(resolved_policy).claims.find(r => r[0] == 'runtime_event')[1];
+
+  console.log(resolved_policy);
   // look for data egress
   arc.storeChanged = (storeId, store) => {
     getPrototypeOf(arc).storeChanged.call(arc, storeId, store);
     if (storeId === 'pickedFont') {
       console.warn('pickedFont', store.data);
-      const font = fontData.find(r => r.fullName === store.data);
-      emitResult(font);
+      const font = fontData.find(r => r.fullName === store.data.font);
+      console.log("Claims " + JSON.stringify(store.data.claims));
+      if (store.data.claims.indexOf(neededClaims) != -1) {
+        emitResult(font);
+      } else {
+        emitResult(font);
+        setTimeout(() => {
+          const err = window.parent.document.getElementById('error');
+          err.innerHTML = '<span style="color: black; opacity: 1.0">Attempted egress without claim: '
+              + neededClaims + ' found: ' + JSON.stringify(store.data.claims)
+              + "</span>";
+          err.setAttribute('show', 'true');
+          err.addEventListener('click', () => {
+            err.removeAttribute('show');
+          });
+        }, 60);
+      }
     }
   };
   // ask Chef to execute recipe(s)
