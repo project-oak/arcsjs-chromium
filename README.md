@@ -9,5 +9,5 @@ resistant. This allows developers to create custom font pickers like the one
 shown below without accessing the full set of local fonts.
 
 For documentation and sample code, see
-the [explainer](pkg/demo/explainer/index.md).
+the [explainer](pkg/demo/explainer/README.md).
 
