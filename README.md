@@ -11,3 +11,5 @@ shown below without accessing the full set of local fonts.
 For documentation and sample code, see
 the [explainer](pkg/demo/explainer/README.md).
 
+For a more sophisticated, full-featured demo, see the integration of 
+[FontChooser](pkg/demo/fonts/) and [PhotoChooser](pkg/demo/photos/) inside the [QuillJS rich text editor](https://project-oak.github.io/arcsjs-chromium/demo/quill/index.html).
