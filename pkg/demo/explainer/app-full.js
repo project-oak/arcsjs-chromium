@@ -1,4 +1,4 @@
-import {FontChooser} from '../../FontChooser/FontChooser.js';
+import {FontChooser} from 'https://project-oak.github.io/arcsjs-chromium/FontChooser/FontChooser.js';
 import {fonts} from './CustomFontSet.js';
 
 // we need an absolute url to the location of the local library
