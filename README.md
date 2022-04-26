@@ -2,21 +2,22 @@
 
 ## Secure Font Picker using ArcsJs
 
-This is a prototype implementation of a Picker API for Chrome that would allow
+This is a prototype implementation of a picker API for Chrome built on
+[ArcsJs](https://github.com/project-oak/arcsjs-core) that allows
 permission-less access to fingerprintable resources while being extensible, and
-fingerprint resistant.
+fingerprint resistant. This allows developers to create custom font pickers
+like the one shown below without accessing the full set of local fonts.
 
 ![](https://project-oak.github.io/arcsjs-chromium/demo/explainer/fulldemo.png)
-
 [Live Demo](https://project-oak.github.io/arcsjs-chromium/demo/explainer/fulldemo.html)
 
 The general mechanism for achieving our goal of non-fingerprintability is to
 restrict the code that is processing the list of fonts:
 
-* Only one font can ever be seen by the code at a time
-* The code is pure functional. It can only receive inputs and return outputs. No access to writable global state is permitted.
-* Rendering is done via templates. No access to DOM is permitted.
-* Only a single datum, the selected font, may be returned to the host page.
+- Only one font can ever be seen by the code at a time
+- The code is pure functional. It can only receive inputs and return outputs. No access to writable global state is permitted.
+- Rendering is done via templates. No access to DOM is permitted.
+- Only a single datum, the selected font, may be returned to the host page.
 
 Despite those restrictions, font pickers can be built with rich functionality
 including arbitrary grouping, mixing of local and web fonts, search and sort
@@ -24,7 +25,8 @@ functionality, and even the ability to create and store new per-font metadata
 like a personal rating or favoriting mechanism.
 
 The full system is very flexible, but for the purposes of this tutorial, we will
-only be modifying **Recipes** to customize the system.
+only be modifying [**Recipes**](https://github.com/project-oak/arcsjs-chromium#recipes) 
+and [**Particles**](https://github.com/project-oak/arcsjs-chromium#particles) to customize the system.
 
 As a demonstration of flexibility, below is a screenshot of a Lightroom-style
 photo picker built using the same techniques.
@@ -48,9 +50,9 @@ request for the picker, and invokes it when desired. A picker request is
 initiated by invoking `FontChooser.requestFont(request)` with a JSON object
 containing the following key parameters:
 
-* **chooser**: The root DOM element to contain the IFRAME
-* **webFonts**: Additional host-page (not local) supplied fonts.
-* **kind**: A reference to the **_Recipe_** file containing your custom picker
+- **chooser**: The root DOM element to contain the IFRAME
+- **webFonts**: Additional host-page (not local) supplied fonts.
+- **kind**: A reference to the **_Recipe_** file containing your custom picker
   code.
 
 As an example
@@ -64,24 +66,26 @@ const FamilyRequest = {
   // custom container
   chooser: window.chooser
 };
+
+FontChooser.requestFont(FamilyRequest);
 ```
 
 **Note**: The `${local}` variable is just a JS variable defined in the recipe
-file
+file which we will explain in the next section.
 
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/app.js" target="_demo">See app.js example</a>
 
 ## Recipes and Particles
 
 Rather than delve into the workings of the recipe file, at this point, just
-accept that it tells the runtime which code to load and which data it can read
-and write externally. We'll loop back and explain it in more detail later.
-Instead, let's examine the meat of the simplest font picker, the `LocalFonts.js`
-file which is referenced by `LocalFontsRecipe.js`.
+accept that it tells the runtime which Particle (code) to load and which data
+the code can read and write externally. We'll loop back and explain it in more
+detail later. Right now, let's examine the meat of the simplest font picker,
+the `LocalFonts.js` file which is referenced by `LocalFontsRecipe.js`.
 
 The ArcsJs system refers to code it loads from recipes as **_Particles_** and
-in the font picker system, we use a special variant of these called a **_
-Non-Permissive Particle_**. The key difference is that a non-permissive particle
+in the font picker system, we use a special variant of these called a 
+**_Non-Permissive Particle_**. The key difference is that a non-permissive particle
 is just a JSON dictionary of pure functions. It cannot define classes or top
 level globals. As a simple example:
 
@@ -106,7 +110,7 @@ a `template` variable. Here's an example of the simplest possible
 local font picker.
 
 ```
-{ 
+{
 render({fonts}) {
   return {
     myfonts: {
@@ -132,13 +136,15 @@ The `render` function is given an opaque reference to a list of fonts. This is
 not an object you can iterate or inspect -- it is simply passed around the system
 and expanded internally by the runtime as needed. The goal of the render
 function is to return an object which associates these opaque `fonts` handles
-to templates for rendering. In the example above, we return an object with
+to templates for rendering.
+
+In the example above, the `render` function return an object with
 a key called `myfonts` with two properties: `models` and `$template`. _Models_
-points to the input `fonts` opaque reference, and `$template` refers to a
-`<template>` element which will be stamped down for each font in the
-input. The `<div>{{myfonts}}</div>` triggers the application of the template to
-the opaque font list. (_Note_ that in templates, double curly brace `{{x}}` is
-template interpolation.)
+points to the input `fonts` opaque reference. Similarly `$template` points to `font_T`
+which is how the system knows to stamp the `<template font_T>` element in the template
+for each font in the input. In the template, the `<div>{{myfonts}}</div>` triggers the
+application of the `<template>` div to the opaque font list. (_Note_ that in templates,
+double curly brace `{{x}}` is template interpolation.)
 
 However, there's something missing in the above example. Where do `{{name}}`
 and `{{displayStyle}}` come from? That's where **_Decorator_** functions come
@@ -146,8 +152,8 @@ in.
 
 ## Decorators
 
-A Decorator function is a pure function which maps a piece of font data into *
-additional variables* for rendering. A decorator is given associated font data,
+A Decorator function is a pure function which maps a piece of font data into 
+_additional variables_ for rendering. A decorator is given associated font data,
 and returns a new set of variables which are to be used in later operations,
 such as filtering, sorting, and rendering. Here is the simplest possible
 decorator:
@@ -162,21 +168,24 @@ This just maps the fields of the font directly to the output without change, but
 it isn't very useful. A more useful example:
 
 ```
-decorator({family, fullName, weight, style}) {
+myDecorator({family, fullName, weight, style}) {
   const fweight = style.includes('Bold') ? 'bold' : weight;
   const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
   return {
     key: fullName,
     sortKey: `family`,
+    // Here are the definitions of the name and displayStyle references we saw above.
     name: fullName,
     displayStyle: `font-family: "${family}"; font-weight: ${fweight}; font-style: ${fstyle};`
   };
 },
 ```
 
-Here you see what the `{{name}}` and `{{displayStyle}}` references earlier were
-pointing to. There are also two new fields,
-`key` and `sortKey`. After the _decorator_ has been applied to the every item in
+Here you see the `{{name}}` and `{{displayStyle}}` references from earlier are
+pointing to `fullName` and CSS formatting respectively. There are also two new fields,
+`key` and `sortKey`.
+
+After the _decorator_ has been applied to the every item in
 the font _model_, there is an implicit sort which uses the `sortKey` field as
 the field to sort on. These decorator fields are merged with the font data
 before the template is applied, so technically we don't need the `{{name}}`
@@ -190,7 +199,7 @@ render({fonts}) {
     myfonts: {
       models: fonts,
       $template: 'font_t',
-      decorator: `decorator`
+      decorator: `myDecorator`
     }
   };
 },
@@ -203,15 +212,19 @@ file.
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/2-SimpleDecorator.js" target="_demo">See a Simple Decorator example</a>
 and
 its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/2-SimpleDecoratorRecipe.js" target="_demo">recipe definition</a>.
+If you have remixed this project and are using Glitch, you can
+click the "Simple Decorator" button on the right to see the results of this
+code.
 
 ## Filtering
 
-Sometimes you want to apply a filter to a list in order to a subset. This is
-supported, and filters are applied after _decorator_s and can utilize that data
-as well. As an example, here's a filter for only _bold_ fonts to be shown.
+Sometimes you want to apply a filter to a list to obtain a subset. This is
+supported, and filters are applied after _decorators_. As a reult,
+decorators can use the data from the decorator. As an example, here's a
+filter for only _bold_ fonts to be shown.
 
 ```
-filter({style}) {
+boldFilter({style}) {
   return style?.toLowerCase().includes('bold');
 },
 ```
@@ -225,7 +238,7 @@ render({fonts}) {
       models: fonts,
       $template: 'font_t',
       decorator: `decorator`,
-      filter: `filter`
+      filter: `boldFilter`
     }
   };
 },
@@ -233,7 +246,9 @@ render({fonts}) {
 
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/3-FilterBold.js" target="_demo">See a FilterBold example</a>
 and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/3-FilterBoldRecipe.js" target="_demo">recipe definition</a>
-
+If you have remixed this project and are using Glitch, you can
+click the "Filter Bold" button on the right to see the results of this
+code.
 
 ## Event Handling
 
@@ -243,13 +258,13 @@ piece of the puzzle is to use event handlers to allow a font to be clicked on
 and returned to the _host page_.
 
 An _event handler_ is just a function referenced by special attributes in a
-template. These attributes always begin with `on-` with a suffix corresponding
-to a typical _DOM UI Event_ name.
+template. These attributes always begin with `on-` and have a suffix corresponding
+to a typical _DOM UI Event_ name. (For example: `on-click`.)
 
 The difference between event handling in our templates and in regular Web applications
-is that the DOM event data is scrubbed, and you are given an `eventlet` and
-a `key` or `value` of your own choice supplied in the template. Let's look at a
-simple example:
+is that the DOM event data is scrubbed, and instead the referenced function will
+recive an `eventlet` and a `key` or `value` of your own choice supplied in the template.
+Let's look at a simple example:
 
 ```
 <template font_t>
@@ -277,7 +292,9 @@ the chooser is closed, and control is returned to the _Host Page_.
 
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/4-EventHandling.js" target="_demo">See the EventHandling example</a>
 and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/4-EventHandlingRecipe.js" target="_demo">recipe definition</a>.
-
+If you have remixed this project and are using Glitch, you can
+click the "Event Handling" button on the right to see the results of this
+code.
 
 ## Collation
 
@@ -338,13 +355,15 @@ Then in our template, we would write:
 
 **Note**: The `sans_not_sans_t` template renders either 'The Sans' or 'The Not
 Sans'. Then it invokes template
-`font_t` from before with ``{{mysublist}}`` which is a group of either all the
+`font_t` from before with `{{mysublist}}` which is a group of either all the
 sans fonts, or all the not sans fonts. You can specify which template to use
 either in the `render` function, or by a special `repeat` attribute shown here.
 
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/5-Collation.js" target="_demo">See the Collation example</a> and
 its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/5-CollationRecipe.js" target="_demo">recipe definition</a>.
-
+If you have remixed this project and are using Glitch, you can
+click the "Collation" button on the right to see the results of this
+code.
 
 # Advanced Functionality
 
@@ -363,14 +382,14 @@ decorator(modelItem, inputs, state)
 
 `modelItem` is the list of font metadata fields provided by the underlying local
 fonts (or web fonts). `inputs` and `state`
-are specific to the *ArcsJs* system. _Inputs_ are data provided by a ArcsJs _
+are specific to the _ArcsJs_ system. _Inputs_ are data provided by a ArcsJs _
 Store_ connected to your Particle by the _Recipe_. `state` is an object
 maintained by the ArcsJs system that allows you to store and reference global
 data. The ArcsJs system is reactive, so anytime `inputs` or `state` changes,
 your particle is re-executed to update the UI.
 
 Ordinarily, `state` is globally mutable and readable, however this would be
-dangerous in a *Non Permissive Particle* because it could accumulate global font
+dangerous in a _Non Permissive Particle_ because it could accumulate global font
 data and create a fingerprint. So this 'state' variable is not modifiable by
 _decorators_ and other functions in its callchain -- it is effectively frozen.
 
@@ -428,19 +447,18 @@ initialize({}, state) {
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/6-UIState.js" target="_demo">See a UI State example</a> and
 its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/6-UIStateRecipe.js" target="_demo">recipe definition</a>.
 
-
 ## Per-Item Mutable UI State
 
 The previous section demonstrated global mutable UI state being utilized by a
 filter function, but what if the user needs to update state that is associated
-with each font? A typical example would be something like *favoriting* or *
-bookmarking* a font. We'd want these fonts to sort to the top in a special
+with each font? A typical example would be something like _favoriting_ or _
+bookmarking_ a font. We'd want these fonts to sort to the top in a special
 section, or perhaps allow the user to set a filter like "Show only favorites".
 
 We started off this document by declaring that our functions are
 pure-functional and unable to mutate global state (although they can access the
 `inputs` and `state` objects). But there is one exception to this rule: **_
-privateData_**. Hidden in each *modelItem* given to a `decorator` there is an
+privateData_**. Hidden in each _modelItem_ given to a `decorator` there is an
 extra field, `privateData`, which acts like a memoized computation. It is an
 immutable variable whose value is whatever value the function last returned.
 The runtime simply hands the `privateData` object back to the function on next
@@ -514,7 +532,7 @@ render({fonts}) {
 The last piece of the puzzle is how do we write the `onFavorite` method.
 
 ```
-onFavorite({eventlet: {value}}) {   
+onFavorite({eventlet: {value}}) {
     value.favorite = true;
 },
 ```
@@ -522,19 +540,18 @@ onFavorite({eventlet: {value}}) {
 We can also add an `onUnfavorite` method.
 
 ```
-onFavorite({eventlet: {value}}) {   
+onFavorite({eventlet: {value}}) {
     value.favorite = false;
 },
 ```
 
 **Note**: This is likely to change because it relies on this `privateData`
 object passed in to be mutable during an event handler. Most likely, we will
-change this to allow the event handler to somehow return a *new* privateData
+change this to allow the event handler to somehow return a _new_ privateData
 object.
 
-<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/7-PerItemUiState.js" target="_demo">See the Per Item UI State example</a> and 
+<a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/7-PerItemUiState.js" target="_demo">See the Per Item UI State example</a> and
 its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/7-PerItemUiStateRecipe.js" target="_demo">recipe definition</a>.
-
 
 ## Composition
 
@@ -587,7 +604,7 @@ main: {
 
 So now someone can write a particle that custom renders a list of font with a
 specific property (e.g. bold) and slot it into another particle that wants to
-provide a section for it. In this case, we are *effortlessly* reusing the
+provide a section for it. In this case, we are _effortlessly_ reusing the
 particle we wrote earlier, `3-FilterBold.js`, to add a special section to our
 picker.
 
@@ -601,14 +618,13 @@ recipe and any policies or restrictions imposed on it.
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/8-Slots.js" target="_demo">See the Slots example</a>
 and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/Library/8-SlotsRecipe.js" target="_demo">recipe definition</a>.
 
-
 ## Breaking out of the Container
 
 There are two ways to break out of the sandboxed security model: _Services_
 and _Custom Elements_. Both require explicit trust because they will be given
 the full power of the Javascript environment. Typical examples of _Services_ are
 those they need to access the network, use Web APIs, or run beefy libraries
-like *Tensorflow*. The Photo Picker prototype for example, uses a service to
+like _Tensorflow_. The Photo Picker prototype for example, uses a service to
 read _EXIF_ metadata from an image for display.
 
 _Custom Elements_ are normally used when you need rendering power not provided
@@ -626,7 +642,7 @@ For now, let's utilize a pre-existing service that's been written for us. The
 simplest service to use is Geo-Location, which we will use to pick suggested
 fonts based on your geo-location.
 
-Services in ArcsJs are based on *asynchronous message passing*. You may send an
+Services in ArcsJs are based on _asynchronous message passing_. You may send an
 arbitrary JSON object to a service, specified by a `kind` field of the name of
 the service, and usually by convention a `msg` field specifying the name of the
 method on the service you'd like to invoke, which returns a `Promise` that is
@@ -662,7 +678,7 @@ and its <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/de
 
 ## Other Topics
 
-The complete runtime behind the picker, *ArcsJs*, offers far more powerful
+The complete runtime behind the picker, _ArcsJs_, offers far more powerful
 idioms for computing not discussed or exposed here. ArcsJs has an underlying
 storage system based on CRDTs. It is not browser/DOM specific and abstracts
 away rendering surfaces to support arbitrary device outputs. It includes a
@@ -726,7 +742,7 @@ they are assembled in a dataflow graph, the system may assert checks that some
 claims hold or do not hold. As an example, specific to the font case, a given
 local font might be safe to egress, if it is known to be among an extremely
 common group of fonts everyone has installed, thus providing no entropy. The
-system could provide a 1st-party *trusted particle* which can return a list of
+system could provide a 1st-party _trusted particle_ which can return a list of
 such fonts with such a claim.
 
 These fonts can then be mixed-and-matched into a complex font recipe, which
