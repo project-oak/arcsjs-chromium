@@ -36,6 +36,6 @@
   // make a surface (shadowRoot is on)
   window.surface = new XenSurface(document.body, true);
   // be heard
-  top.postMessage('surface', '*');
+  window.parent.postMessage('surface', '*');
   console.warn('surface is online');
 </script>
