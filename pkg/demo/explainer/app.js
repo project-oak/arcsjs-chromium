@@ -21,7 +21,7 @@ const SampleRequest = {
   // custom fonts
   webFonts: fonts,
   // custom container
-  chooser: window.menu
+  chooser: window.chooser
 };
 
 const SimpleRequest = {
