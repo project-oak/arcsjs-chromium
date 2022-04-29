@@ -8,29 +8,25 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-export const QuillFontPickerRecipe = {
+export const QuillPhotoPickerRecipe = {
   $meta: {
-    description: 'Quill Font Picker'
+    description: 'Quill Photo Picker'
   },
   $stores: {
-    fonts: {
+    photos: {
       $type: `[Key]`,
       $tags: ['simple']
     },
-    pickedFont: {
-      $type: `FontKey`
+    pickedPhoto: {
+      $type: `PhotoKey`
     },
-    suggested: {
-      $type: `[Key]`,
-    }
   },
 
   main: {
-    $kind: "$local/QuillFontPicker",
+    $kind: "$local/QuillPhotoPicker",
     $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont',
-      suggested: 'suggested'
-    }
+      photos: 'photos',
+      pickedPhoto: 'pickedPhoto',
+    },
   }
 };
