@@ -67,7 +67,7 @@
   },
 
   onFontClick({eventlet: {key}}) {
-    return {pickedFont: key};
+    return {pickedFont: {font: key, claims: ['xuser_action']}};
   },
 
   onChange({eventlet: {value}}, state) {
@@ -152,7 +152,7 @@
 
 <template font_t>
   <div font toolbar on-click="onFontClick" key="{{key}}">
-    <span flex name>{{fullName}}</span>
+    <span flex name xen:style="{{displayStyle}}">{{fullName}}</span>
     <span sample xen:style="{{displayStyle}}">Sample</span>
   </div>
 </template>
@@ -162,7 +162,7 @@
     <expandable-item single="{{single}}">
       <span slot="top" font toolbar on-click="onFontClick" key="{{key}}">
         <span style="font-size: 15px; line-height: 10px;">&#9734;</span>
-        <span flex name>{{family}}</span>
+        <span flex name xen:style="{{displayStyle}}">{{family}}</span>
         <span sample xen:style="{{displayStyle}}">Sample</span>
       </span>
       <div slot="bottom" flex>
