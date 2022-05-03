@@ -407,7 +407,7 @@ onChange({eventlet: {value}}, state) {
 
 This will modify the `state.searchFilter` field when the user updates the
 textfield, triggering the particle to be re-rendered. We can update
-the `myDecorator` and `filter` function to use this new state field.
+the `myDecorator` and `searchFilter` function to use this new state field.
 
 ```
 
