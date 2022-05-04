@@ -159,7 +159,7 @@ such as filtering, sorting, and rendering. Here is the simplest possible
 decorator:
 
 ```
-decorator(fontData) {
+myDecorator(fontData) {
   return {};
 }
 ```
@@ -237,7 +237,7 @@ render({fonts}) {
     myfonts: {
       models: fonts,
       $template: 'font_t',
-      decorator: `decorator`,
+      decorator: `myDecorator`,
       filter: `boldFilter`
     }
   };
@@ -305,7 +305,7 @@ Collation creates new sub-lists of opaque fonts, grouped by the collation field.
 First, let's create a "sans vs non-sans" decoration:
 
 ```
-decorator({family, fullName, weight, style}) {
+myDecorator({family, fullName, weight, style}) {
   const fweight = style.includes('Bold') ? 'bold' : weight;
   const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
   return {
@@ -327,8 +327,8 @@ render({fonts}) {
     myfonts: {
       models: fonts,
       $template: 'sans_not_sans_t',
-      decorator: `decorator`,
-      filter: `filter`,
+      decorator: `myDecorator`,
+      filter: `boldFilter`,
       mysublist: {
         collateBy: 'sansType'
       }
@@ -377,7 +377,7 @@ global state that can only be altered by event handlers. The true set of
 parameters passed to the decorator looks like this:
 
 ```
-decorator(modelItem, inputs, state)
+myDecorator(modelItem, inputs, state)
 ```
 
 `modelItem` is the list of font metadata fields provided by the underlying local
@@ -407,11 +407,11 @@ onChange({eventlet: {value}}, state) {
 
 This will modify the `state.searchFilter` field when the user updates the
 textfield, triggering the particle to be re-rendered. We can update
-the `decorator` and `filter` function to use this new state field.
+the `myDecorator` and `searchFilter` function to use this new state field.
 
 ```
 
-decorator({family, fullName, weight, style}, inputs, {searchFilter}) {
+myDecorator({family, fullName, weight, style}, inputs, {searchFilter}) {
   const fweight = style.includes('Bold') ? 'bold' : weight;
   const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
   return {
@@ -423,13 +423,13 @@ decorator({family, fullName, weight, style}, inputs, {searchFilter}) {
   };
 },
 
-filter({name, myFilter}, ) {
+searchFilter({name, myFilter}, ) {
   return name?.toLowerCase().includes(myFilter);
 },
 ```
 
 The `searchFilter` variable is now destructured from the third argument
-of `decorator` and stashed in the output as `myFilter`, which is picked up in
+of `myDecorator` and stashed in the output as `myFilter`, which is picked up in
 the `filter` function.
 
 Whenever you use UI state, it's a good idea to initialize it to something. Here
@@ -482,10 +482,10 @@ Let's try to allow 'favoriting' fonts. First, the UI:
 **Note**: We're binding the `value` attribute directly to the `privateData`
 value from the decorator.
 
-Now update the `decorator` to use it:
+Now update `myDecorator` to use it:
 
 ```
-decorator({family, fullName, weight, style, privateData}) {
+myDecorator({family, fullName, weight, style, privateData}) {
   const fweight = style.includes('Bold') ? 'bold' : weight;
   const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
   const favorite = privateData?.favorite || false;
