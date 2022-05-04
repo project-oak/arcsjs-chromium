@@ -22,7 +22,7 @@ class PhotoChooser extends Module {
   }
 
   async photoChooser() {
-    const photo = await choosePhoto('PhotosByDate', 'chooser', true, 12);
+    const photo = await choosePhoto('QuillPhotoPicker', 'chooser', true, 12);
     const range = this.quill.getSelection(true);
     const delta = new Delta().retain(range.index).delete(range.length);
     delta.insert({image: photo});

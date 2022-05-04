@@ -15,7 +15,7 @@
     });
   },
 
-  render({fonts}) {
+  render({fonts, suggested}) {
     return {
       styles: {
         models: fonts,
@@ -25,6 +25,7 @@
       friends: {
         models: fonts,
         decorator,
+        suggested,
         filter: 'suggestedfilter',
       },
       families: {
@@ -67,7 +68,7 @@
   },
 
   onFontClick({eventlet: {key}}) {
-    return {pickedFont: {font: key, claims: ['xuser_action']}};
+    return {pickedFont: {font: key, claims: ['user_action']}};
   },
 
   onChange({eventlet: {value}}, state) {

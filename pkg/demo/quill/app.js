@@ -12,7 +12,7 @@ import {fonts} from '../fonts/CustomFontSet.js';
 
 // we need an absolute url to the location of the local library
 const localPhoto = `${import.meta.url.split('/').slice(0, -1).join(
-    '/')}/../photos/Library`;
+    '/')}/Library`;
 const localFont = `${import.meta.url.split('/').slice(0, -1).join(
     '/')}/Library`;
 
