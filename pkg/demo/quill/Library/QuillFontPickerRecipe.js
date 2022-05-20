@@ -8,6 +8,8 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
+//import 'https://arcsjs-apps.web.app/Library/TensorFlow/tensorflowjs-import.js';
+
 export const QuillFontPickerRecipe = {
   $meta: {
     description: 'Quill Font Picker'
@@ -32,5 +34,8 @@ export const QuillFontPickerRecipe = {
       pickedFont: 'pickedFont',
       suggested: 'suggested'
     }
+  },
+  DevTools: {
+    $kind: "https://arcsjs-apps.web.app/Library/DevTools/DevTools.js"
   }
 };

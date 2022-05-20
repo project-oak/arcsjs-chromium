@@ -7,7 +7,7 @@
  */
 const OldImage = Quill.import('formats/image');
 
-const ATTRIBUTES = ['alt', 'height', 'width'];
+const ATTRIBUTES = ['alt', 'height', 'width', 'style'];
 
 class BlobImage extends OldImage {
   static create(value) {

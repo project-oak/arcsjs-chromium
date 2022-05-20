@@ -13,19 +13,22 @@ import {fonts} from '../fonts/CustomFontSet.js';
 // we need an absolute url to the location of the local library
 const localPhoto = `${import.meta.url.split('/').slice(0, -1).join(
     '/')}/Library`;
+const localComplexPhoto = `${import.meta.url.split('/').slice(0, -1).join(
+    '/')}/../photos/Library`;
+
 const localFont = `${import.meta.url.split('/').slice(0, -1).join(
     '/')}/Library`;
 
 window.choosePhoto = async (kind, container, fileSystem, maxPhotos) => {
   const args = {
-    kind: `${localPhoto}/${kind}Recipe.js`,
+    kind: `${localComplexPhoto}/${kind}Recipe.js`,
     chooser: window[container],
     fileSystem,
     maxPhotos
   };
   const photo = await PhotoChooser.requestPhoto(args);
   console.warn('Chosen Photo:', photo);
-  return photo.photoUrl;
+  return photo;
   // test.src = photo && photo.photoUrl;
 };
 

@@ -38,29 +38,32 @@ var EventEmitter = class {
   }
 };
 
+// pkg/js/utils/types.js
+var logKinds = ["log", "group", "groupCollapsed", "groupEnd", "dir"];
+var errKinds = ["warn", "error"];
+
 // pkg/js/utils/log.js
-var _logFactory = (enable, preamble, color, log11 = "log") => {
+var { fromEntries } = Object;
+var _logFactory = (enable, preamble, color, kind = "log") => {
   if (!enable) {
     return () => {
     };
   }
-  if (log11 === "dir") {
+  if (kind === "dir") {
     return console.dir.bind(console);
   }
   const style = `background: ${color || "gray"}; color: white; padding: 1px 6px 2px 7px; border-radius: 6px 0 0 6px;`;
-  return console[log11].bind(console, `%c${preamble}`, style);
+  return console[kind].bind(console, `%c${preamble}`, style);
 };
-var logKinds = ["log", "group", "groupCollapsed", "groupEnd", "dir"];
-var errKinds = ["warn", "error"];
 var logFactory = (enable, preamble, color = "") => {
-  const loggers = {};
-  logKinds.forEach((log12) => loggers[log12] = _logFactory(enable, `${preamble}`, color, log12));
-  errKinds.forEach((log12) => loggers[log12] = _logFactory(true, `${preamble}`, color, log12));
-  const log11 = loggers["log"];
+  const debugLoggers = fromEntries(logKinds.map((kind) => [kind, _logFactory(enable, preamble, color, kind)]));
+  const errorLoggers = fromEntries(errKinds.map((kind) => [kind, _logFactory(true, preamble, color, kind)]));
+  const loggers = { ...debugLoggers, ...errorLoggers };
+  const log11 = loggers.log;
   Object.assign(log11, loggers);
   return log11;
 };
-logFactory.flags = globalThis["logFlags"] || {};
+logFactory.flags = globalThis.config.logFlags || {};
 
 // pkg/js/core/Arc.js
 var customLogFactory = (id) => logFactory(logFactory.flags.arc, `Arc (${id})`, "slateblue");
@@ -116,12 +119,15 @@ var Arc = class extends EventEmitter {
     this.log(`storeChanged: "${storeId}"`);
     values(this.hosts).forEach((host) => {
       const bindings = host.meta?.bindings;
-      const isBound = bindings && entries(bindings).some(([n, v]) => (v || n) === storeId);
-      if (isBound) {
+      const inputs = host.meta?.inputs;
+      const isBoundBackwardCompatible = (bindings2) => bindings2 && entries(bindings2).some(([n, v]) => (v || n) === storeId);
+      const isBound = (inputs2) => inputs2 && inputs2.some((input) => values(input)[0] == storeId || keys(input)[0] == storeId);
+      if (isBoundBackwardCompatible(bindings) || isBound(inputs)) {
         this.log(`host "${host.id}" has interest in "${storeId}"`);
         this.updateHost(host);
       }
     });
+    this.fire("store-changed", storeId);
   }
   updateHost(host) {
     host.inputs = this.computeInputs(host);
@@ -129,20 +135,38 @@ var Arc = class extends EventEmitter {
   computeInputs(host) {
     const inputs = nob();
     const bindings = host.meta?.bindings;
-    const staticInputs = host.meta?.inputs;
+    const inputBindings = host.meta?.inputs;
+    const staticInputs = host.meta?.staticInputs;
     if (bindings) {
-      keys(bindings).forEach((name) => this.computeInput(name, bindings, staticInputs, inputs));
+      keys(bindings).forEach((name) => this.computeInputBackwardCompatibile(name, bindings, staticInputs, inputs));
+    }
+    if (inputBindings) {
+      inputBindings.forEach((input) => this.computeInput(entries(input)[0], staticInputs, inputs));
+    }
+    if (bindings || inputBindings) {
       this.log(`computeInputs(${host.id}) =`, inputs);
     }
     return inputs;
   }
-  computeInput(name, bindings, staticInputs, inputs) {
+  computeInputBackwardCompatibile(name, bindings, staticInputs, inputs) {
     const storeName = bindings[name] || name;
     const store = this.stores[storeName];
     if (store) {
       inputs[name] = store.pojo;
     } else {
-      this.log.error(`computeInputs: "${storeName}" (bound to "${name}") not found`);
+      this.log.error(`computeInput: "${storeName}" (bound to "${name}") not found`);
+    }
+    if (!(inputs[name]?.length > 0) && staticInputs?.[name]) {
+      inputs[name] = staticInputs[name];
+    }
+  }
+  computeInput([name, binding], staticInputs, inputs) {
+    const storeName = binding || name;
+    const store = this.stores[storeName];
+    if (store) {
+      inputs[name] = store.pojo;
+    } else {
+      this.log.error(`computeInput: "${storeName}" (bound to "${name}") not found`);
     }
     if (!(inputs[name]?.length > 0) && staticInputs?.[name]) {
       inputs[name] = staticInputs[name];
@@ -150,17 +174,17 @@ var Arc = class extends EventEmitter {
   }
   assignOutputs({ id, meta }, outputs) {
     const names = keys(outputs);
-    if (meta?.bindings && names.length) {
-      names.forEach((name) => this.assignOutput(name, this.stores, outputs[name], meta.bindings));
+    if ((meta?.bindings || meta?.outputs) && names.length) {
+      names.forEach((name) => this.assignOutput(name, this.stores, outputs[name], meta.bindings, meta.outputs));
       this.log(`[end][${id}] assignOutputs:`, outputs);
     }
   }
-  assignOutput(name, stores, output, bindings) {
+  assignOutput(name, stores, output, bindings, outputs) {
     if (output !== void 0) {
-      const binding = bindings[name] || name;
+      const binding = bindings?.[name] || this.findOutputByName(outputs, name) || name;
       const store = stores[binding];
       if (!store) {
-        if (bindings[name]) {
+        if (bindings?.[name] || outputs?.[name]) {
           this.log.warn(`assignOutputs: no "${binding}" store for output "${name}"`);
         }
       } else {
@@ -169,10 +193,17 @@ var Arc = class extends EventEmitter {
       }
     }
   }
+  findOutputByName(outputs, name) {
+    const output = outputs?.find((output2) => keys(output2)[0] === name);
+    if (output) {
+      return values(output)[0];
+    }
+  }
   async render(packet) {
-    this.log("render", packet, Boolean(this.composer));
     if (this.composer) {
       this.composer.render(packet);
+    } else {
+      this.log("render called, but composer is null", packet);
     }
   }
   onevent(pid, eventlet) {
@@ -234,13 +265,11 @@ var shallowMerge = (obj, data) => {
   }
   return data;
 };
-var deepCopy = (datum) => {
+function deepCopy(datum) {
   if (!datum) {
     return datum;
   } else if (Array.isArray(datum)) {
-    const clone = [];
-    datum.forEach((element) => clone.push(deepCopy(element)));
-    return clone;
+    return datum.map((element) => deepCopy(element));
   } else if (typeof datum === "object") {
     const clone = /* @__PURE__ */ Object.create(null);
     Object.entries(datum).forEach(([key2, value]) => {
@@ -250,7 +279,7 @@ var deepCopy = (datum) => {
   } else {
     return datum;
   }
-};
+}
 var deepEqual = (a, b) => {
   const type = typeof a;
   if (type !== typeof b) {
@@ -383,7 +412,7 @@ var collationToRenderModels = (collation, name, $template) => {
 // pkg/js/core/Host.js
 var { entries: entries3 } = Object;
 var customLogFactory2 = (id) => logFactory(logFactory.flags.host, `Host (${id})`, arand(["#5a189a", "#51168b", "#48137b", "#6b2fa4", "#7b46ae", "#3f116c"]));
-var Host = class {
+var Host = class extends EventEmitter {
   arc;
   composer;
   id;
@@ -392,6 +421,7 @@ var Host = class {
   meta;
   particle;
   constructor(id) {
+    super();
     this.log = customLogFactory2(id);
     this.id = id;
   }
@@ -407,7 +437,7 @@ var Host = class {
       this.detachParticle();
     }
     if (particle) {
-      this.attachParticle(particle);
+      this.particle = particle;
       this.meta = meta || this.meta;
     }
   }
@@ -417,9 +447,6 @@ var Host = class {
   detach() {
     this.detachParticle();
     this.arc = null;
-  }
-  attachParticle(particle) {
-    this.particle = particle;
   }
   detachParticle() {
     const { particle } = this;
@@ -450,22 +477,20 @@ var Host = class {
     const { id, container, template } = this;
     this.arc?.render({ id, container, content: { template, model } });
   }
-  trap(func) {
-    return func();
-  }
   set inputs(inputs) {
     if (this.particle && inputs) {
       const lastInputs = this.particle.internal.inputs;
-      const dirty = !lastInputs || this.dirtyCheck(inputs, lastInputs, this.lastOutput);
-      if (dirty) {
-        this.particle.inputs = { ...this.meta?.inputs, ...inputs };
+      if (this.dirtyCheck(inputs, lastInputs, this.lastOutput)) {
+        this.particle.inputs = { ...this.meta?.staticInputs, ...inputs };
+        this.fire("inputs-changed");
       } else {
-        this.log("inputs are not interesting, skipping update");
+        this.log("inputs are uninteresting, skipping update");
       }
     }
   }
   dirtyCheck(inputs, lastInputs, lastOutput) {
-    return entries3(inputs).some(([n, v]) => lastOutput?.[n] && !deepEqual(lastOutput[n], v) || !deepEqual(lastInputs?.[n], v));
+    const dirtyBits = ([n, v]) => lastOutput?.[n] && !deepEqual(lastOutput[n], v) || !deepEqual(lastInputs?.[n], v);
+    return !lastInputs || entries3(inputs).some(dirtyBits);
   }
   get config() {
     return this.particle?.config;
@@ -489,6 +514,9 @@ var RawStore = class extends EventEmitter {
   constructor() {
     super();
     this._data = {};
+  }
+  toString() {
+    return this.pretty;
   }
   get data() {
     return this._data;
@@ -576,9 +604,13 @@ var RawStore = class extends EventEmitter {
 var Store = class extends RawStore {
   meta;
   persistor;
+  willPersist = false;
   constructor(meta) {
     super();
     this.meta = meta || {};
+  }
+  toString() {
+    return `${JSON.stringify(this.meta, null, "  ")}, ${this.pretty}`;
   }
   isCollection() {
     return this.meta.type?.[0] === "[";
@@ -594,7 +626,13 @@ var Store = class extends RawStore {
     this.persist();
   }
   async persist() {
-    this.persistor?.persist(this);
+    if (!this.willPersist && this.persistor) {
+      this.willPersist = true;
+      setTimeout(() => {
+        this.willPersist = false;
+        this.persistor.persist(this);
+      }, 500);
+    }
   }
   async restore(value) {
     const restored = await this.persistor?.restore(this);
@@ -703,26 +741,40 @@ var _Runtime = class extends EventEmitter {
   }
   addStore(storeId, store) {
     if (store.marshal) {
-      store.marshal(store);
+      store.marshal(this);
     }
     if (store.persistor) {
       store.persistor.persist = (store2) => this.persistor?.persist(storeId, store2);
     }
-    store.listen("change", this.storeChanged.bind(this, storeId), `${storeId}-changed`);
+    const name = `${this.nid}:${storeId}-changed`;
+    const onChange = this.storeChanged.bind(this, storeId);
+    store.listen("change", onChange, name);
     this.stores[storeId] = store;
     this.maybeShareStore(storeId);
-    this.fire("store-added", store);
+  }
+  storeChanged(storeId, store) {
+    this.log("storeChanged", storeId);
+    this.network?.invalidatePeers(storeId);
+    this.onStoreChange(storeId, store);
+    this.fire("store-changed", store);
+  }
+  onStoreChange(storeId, store) {
+  }
+  do(storeId, task) {
+    task(this.stores[storeId]);
   }
   removeStore(storeId) {
-    const store = this.stores[storeId];
-    store?.unlisten("change", `${storeId}-changed`);
+    this.do(storeId, (store) => {
+      store?.unlisten("change", `${this.nid}:${storeId}-changed`);
+    });
     delete this.stores[storeId];
   }
   maybeShareStore(storeId) {
-    const store = this.stores[storeId];
-    if (store.is("shared")) {
-      this.shareStore(storeId);
-    }
+    this.do(storeId, (store) => {
+      if (store?.is("shared")) {
+        this.shareStore(storeId);
+      }
+    });
   }
   addPeer(peerId) {
     this.peers.add(peerId);
@@ -733,22 +785,15 @@ var _Runtime = class extends EventEmitter {
     [...this.peers].forEach((peerId) => this.maybeShareStoreWithPeer(storeId, peerId));
   }
   maybeShareStoreWithPeer(storeId, peerId) {
-    const store = this.stores[storeId];
-    const nid = this.uid.replace(/\./g, "_");
-    if (!store.is("private") || peerId.startsWith(nid)) {
-      this.shareStoreWithPeer(storeId, peerId);
-    }
+    this.do(storeId, (store) => {
+      const nid = this.uid.replace(/\./g, "_");
+      if (!store.is("private") || peerId.startsWith(nid)) {
+        this.shareStoreWithPeer(storeId, peerId);
+      }
+    });
   }
   shareStoreWithPeer(storeId, peerId) {
     this.network?.shareStore(storeId, peerId);
-  }
-  storeChanged(storeId, store) {
-    this.log("storeChanged", storeId);
-    this.network?.invalidatePeers(storeId);
-    this.onStoreChange(storeId, store);
-    this.fire("store-changed", store);
-  }
-  onStoreChange(storeId, store) {
   }
   async createParticle(host, kind) {
     try {
@@ -818,7 +863,6 @@ var Parser = class {
     return recipe;
   }
   parseSlotSpec(spec, slotName, parentName) {
-    this.slots.push({ ...spec, $name: slotName, $parent: parentName });
     for (const key2 in spec) {
       const info = spec[key2];
       switch (key2) {
@@ -869,23 +913,23 @@ var Parser = class {
     }
   }
   parseSlotsNode(slots, parent) {
-    return Promise.all(entries5(slots).map(([key2, spec]) => {
-      this.parseSlotSpec(spec, key2, parent);
-    }));
+    entries5(slots).forEach(([key2, spec]) => this.parseSlotSpec(spec, key2, parent));
   }
 };
 
-// pkg/js/recipe/StoreCook.js
-var log4 = logFactory(logFactory.flags.recipe, "StoreCook", "#187e13");
-var { values: values4 } = Object;
-var matches = (storeMeta, targetMeta) => {
+// pkg/js/utils/matching.js
+function matches(candidateMeta, targetMeta) {
   for (const property in targetMeta) {
-    if (storeMeta[property] !== targetMeta[property]) {
+    if (candidateMeta[property] !== targetMeta[property]) {
       return false;
     }
   }
   return true;
-};
+}
+
+// pkg/js/recipe/StoreCook.js
+var log4 = logFactory(logFactory.flags.recipe, "StoreCook", "#187e13");
+var { values: values4 } = Object;
 var findStores = (runtime, criteria) => {
   return values4(runtime.stores).filter((store) => matches(store.meta, criteria));
 };
@@ -919,6 +963,9 @@ var StoreCook = class {
       runtime.addStore(meta.name, store);
       await store.restore(meta?.value);
       log4(`realizeStore: created "${meta.name}"`);
+    } else {
+      log4(`realizeStore: mapped to "${meta.name}", setting data to:`, meta?.value);
+      store.data = meta?.value;
     }
     arc.addStore(meta.name, store);
   }
@@ -954,8 +1001,13 @@ var ParticleCook = class {
     return runtime.bootstrapParticle(arc, node.id, meta);
   }
   static specToMeta(spec) {
-    const { $kind: kind, $container: container, $inputs: inputs, $bindings: bindings } = spec;
-    return { kind, inputs, bindings, container };
+    const { $kind: kind, $container: container, $staticInputs: staticInputs, $bindings: bindings } = spec;
+    const inputs = this.formatBindings(spec.$inputs);
+    const outputs = this.formatBindings(spec.$outputs);
+    return { kind, staticInputs, bindings, inputs, outputs, container };
+  }
+  static formatBindings(bindings) {
+    return bindings?.map((binding) => typeof binding === "string" ? { [binding]: "" } : binding);
   }
   static async evacipate(runtime, arc, plan) {
     return Promise.all(plan.particles.map((particle) => this.derealizeParticle(runtime, arc, particle)));
@@ -1084,7 +1136,7 @@ var PathMapper = class {
     this.setRoot(root3);
   }
   add(mappings) {
-    Object.assign(this.map, mappings);
+    Object.assign(this.map, mappings || {});
   }
   resolve(path) {
     const bits = path.split("/");
@@ -1104,6 +1156,7 @@ var PathMapper = class {
 };
 var root = import.meta.url.split("/").slice(0, -3).join("/");
 var Paths = globalThis["Paths"] = new PathMapper(root);
+Paths.add(globalThis.config?.paths);
 
 // pkg/js/isolation/code.js
 var log9 = logFactory(logFactory.flags.code, "code", "gold");
@@ -1945,13 +1998,13 @@ var pathForKind = (kind) => {
   $h\u200D_once.speciesSymbol(speciesSymbol), $h\u200D_once.toStringTagSymbol(toStringTagSymbol), $h\u200D_once.iteratorSymbol(iteratorSymbol), $h\u200D_once.matchAllSymbol(matchAllSymbol);
   const { stringify: stringifyJson } = JSON2;
   $h\u200D_once.stringifyJson(stringifyJson);
-  const fromEntries = Object2.fromEntries || ((entryPairs) => {
+  const fromEntries2 = Object2.fromEntries || ((entryPairs) => {
     const result = {};
     for (const [prop, val] of entryPairs)
       result[prop] = val;
     return result;
   });
-  $h\u200D_once.fromEntries(fromEntries);
+  $h\u200D_once.fromEntries(fromEntries2);
   const { defineProperty: originalDefineProperty } = Object2;
   $h\u200D_once.defineProperty((object, prop, descriptor) => {
     const result = originalDefineProperty(object, prop, descriptor);
@@ -2614,8 +2667,8 @@ ${bodyText}
       return mapGet(instances, moduleSpecifier);
     !function(staticModuleRecord2, moduleSpecifier2) {
       assert(isObject(staticModuleRecord2), `Static module records must be of type object, got ${q(staticModuleRecord2)}, for module ${q(moduleSpecifier2)}`);
-      const { imports, exports: exports2, reexports = [] } = staticModuleRecord2;
-      assert(isArray(imports), `Property 'imports' of a static module record must be an array, got ${q(imports)}, for module ${q(moduleSpecifier2)}`), assert(isArray(exports2), `Property 'exports' of a precompiled module record must be an array, got ${q(exports2)}, for module ${q(moduleSpecifier2)}`), assert(isArray(reexports), `Property 'reexports' of a precompiled module record must be an array if present, got ${q(reexports)}, for module ${q(moduleSpecifier2)}`);
+      const { imports, exports, reexports = [] } = staticModuleRecord2;
+      assert(isArray(imports), `Property 'imports' of a static module record must be an array, got ${q(imports)}, for module ${q(moduleSpecifier2)}`), assert(isArray(exports), `Property 'exports' of a precompiled module record must be an array, got ${q(exports)}, for module ${q(moduleSpecifier2)}`), assert(isArray(reexports), `Property 'reexports' of a precompiled module record must be an array if present, got ${q(reexports)}, for module ${q(moduleSpecifier2)}`);
     }(staticModuleRecord, moduleSpecifier);
     const importedInstances = new Map2();
     let moduleInstance;
@@ -2632,8 +2685,8 @@ ${bodyText}
       }(staticModuleRecord))
         throw new Error2("importHook must return a static module record, got " + q(staticModuleRecord));
       !function(staticModuleRecord2, moduleSpecifier2) {
-        const { exports: exports2 } = staticModuleRecord2;
-        assert(isArray(exports2), `Property 'exports' of a third-party static module record must be an array, got ${q(exports2)}, for module ${q(moduleSpecifier2)}`);
+        const { exports } = staticModuleRecord2;
+        assert(isArray(exports), `Property 'exports' of a third-party static module record must be an array, got ${q(exports)}, for module ${q(moduleSpecifier2)}`);
       }(staticModuleRecord, moduleSpecifier), moduleInstance = makeThirdPartyModuleInstance(compartmentPrivateFields, staticModuleRecord, compartment, moduleAliases, moduleSpecifier, resolvedImports);
     }
     mapSet(instances, moduleSpecifier, moduleInstance);
@@ -2726,11 +2779,11 @@ ${bodyText}
       return arguments;
     }(), "callee").get, StringIteratorObject = new String2()[iteratorSymbol](), StringIteratorPrototype = getPrototypeOf(StringIteratorObject), RegExpStringIterator = RegExp.prototype[matchAllSymbol] && new RegExp()[matchAllSymbol](), RegExpStringIteratorPrototype = RegExpStringIterator && getPrototypeOf(RegExpStringIterator), ArrayIteratorObject = new Array2()[iteratorSymbol](), ArrayIteratorPrototype = getPrototypeOf(ArrayIteratorObject), TypedArray = getPrototypeOf(Float32Array), MapIteratorObject = new Map2()[iteratorSymbol](), MapIteratorPrototype = getPrototypeOf(MapIteratorObject), SetIteratorObject = new Set2()[iteratorSymbol](), SetIteratorPrototype = getPrototypeOf(SetIteratorObject), IteratorPrototype = getPrototypeOf(ArrayIteratorPrototype);
     const GeneratorFunction = getConstructorOf(function* () {
-    }), Generator2 = GeneratorFunction.prototype;
+    }), Generator = GeneratorFunction.prototype;
     const AsyncGeneratorFunction = getConstructorOf(async function* () {
     }), AsyncGenerator = AsyncGeneratorFunction.prototype, AsyncGeneratorPrototype = AsyncGenerator.prototype, AsyncIteratorPrototype = getPrototypeOf(AsyncGeneratorPrototype);
     return { "%InertFunction%": InertFunction, "%ArrayIteratorPrototype%": ArrayIteratorPrototype, "%InertAsyncFunction%": getConstructorOf(async function() {
-    }), "%AsyncGenerator%": AsyncGenerator, "%InertAsyncGeneratorFunction%": AsyncGeneratorFunction, "%AsyncGeneratorPrototype%": AsyncGeneratorPrototype, "%AsyncIteratorPrototype%": AsyncIteratorPrototype, "%Generator%": Generator2, "%InertGeneratorFunction%": GeneratorFunction, "%IteratorPrototype%": IteratorPrototype, "%MapIteratorPrototype%": MapIteratorPrototype, "%RegExpStringIteratorPrototype%": RegExpStringIteratorPrototype, "%SetIteratorPrototype%": SetIteratorPrototype, "%StringIteratorPrototype%": StringIteratorPrototype, "%ThrowTypeError%": ThrowTypeError, "%TypedArray%": TypedArray, "%InertCompartment%": InertCompartment };
+    }), "%AsyncGenerator%": AsyncGenerator, "%InertAsyncGeneratorFunction%": AsyncGeneratorFunction, "%AsyncGeneratorPrototype%": AsyncGeneratorPrototype, "%AsyncIteratorPrototype%": AsyncIteratorPrototype, "%Generator%": Generator, "%InertGeneratorFunction%": GeneratorFunction, "%IteratorPrototype%": IteratorPrototype, "%MapIteratorPrototype%": MapIteratorPrototype, "%RegExpStringIteratorPrototype%": RegExpStringIteratorPrototype, "%SetIteratorPrototype%": SetIteratorPrototype, "%StringIteratorPrototype%": StringIteratorPrototype, "%ThrowTypeError%": ThrowTypeError, "%TypedArray%": TypedArray, "%InertCompartment%": InertCompartment };
   });
 }, ({ imports: $h\u200D_imports, liveVar: $h\u200D_live, onceVar: $h\u200D_once }) => {
   let WeakSet2, Error2, Object2, defineProperty, entries6, freeze, getOwnPropertyDescriptor, getOwnPropertyDescriptors, globalThis2, is, objectHasOwnProperty, values5, arrayFilter, constantProperties, sharedGlobalPropertyNames, universalPropertyNames, whitelist;
@@ -2858,14 +2911,14 @@ ${bodyText}
     }("root", intrinsics, plan);
   });
 }, ({ imports: $h\u200D_imports, liveVar: $h\u200D_live, onceVar: $h\u200D_once }) => {
-  let Error2, WeakSet2, defineProperty, freeze, fromEntries, weaksetAdd, weaksetHas;
-  $h\u200D_imports([["../commons.js", [["Error", [($h\u200D_a) => Error2 = $h\u200D_a]], ["WeakSet", [($h\u200D_a) => WeakSet2 = $h\u200D_a]], ["defineProperty", [($h\u200D_a) => defineProperty = $h\u200D_a]], ["freeze", [($h\u200D_a) => freeze = $h\u200D_a]], ["fromEntries", [($h\u200D_a) => fromEntries = $h\u200D_a]], ["weaksetAdd", [($h\u200D_a) => weaksetAdd = $h\u200D_a]], ["weaksetHas", [($h\u200D_a) => weaksetHas = $h\u200D_a]]]], ["./types.js", []], ["./internal-types.js", []]]);
+  let Error2, WeakSet2, defineProperty, freeze, fromEntries2, weaksetAdd, weaksetHas;
+  $h\u200D_imports([["../commons.js", [["Error", [($h\u200D_a) => Error2 = $h\u200D_a]], ["WeakSet", [($h\u200D_a) => WeakSet2 = $h\u200D_a]], ["defineProperty", [($h\u200D_a) => defineProperty = $h\u200D_a]], ["freeze", [($h\u200D_a) => freeze = $h\u200D_a]], ["fromEntries", [($h\u200D_a) => fromEntries2 = $h\u200D_a]], ["weaksetAdd", [($h\u200D_a) => weaksetAdd = $h\u200D_a]], ["weaksetHas", [($h\u200D_a) => weaksetHas = $h\u200D_a]]]], ["./types.js", []], ["./internal-types.js", []]]);
   const consoleLevelMethods = freeze([["debug", "debug"], ["log", "log"], ["info", "info"], ["warn", "warn"], ["error", "error"], ["trace", "log"], ["dirxml", "log"], ["group", "log"], ["groupCollapsed", "log"]]), consoleOtherMethods = freeze([["assert", "error"], ["timeLog", "log"], ["clear", void 0], ["count", "info"], ["countReset", void 0], ["dir", "log"], ["groupEnd", "log"], ["table", "log"], ["time", "info"], ["timeEnd", "info"], ["profile", void 0], ["profileEnd", void 0], ["timeStamp", void 0]]), consoleWhitelist = freeze([...consoleLevelMethods, ...consoleOtherMethods]);
   $h\u200D_once.consoleWhitelist(consoleWhitelist);
   const makeLoggingConsoleKit = (loggedErrorHandler, { shouldResetForDebugging = false } = {}) => {
     shouldResetForDebugging && loggedErrorHandler.resetErrorTagNum();
     let logArray = [];
-    const loggingConsole = fromEntries(consoleWhitelist.map(([name, _]) => {
+    const loggingConsole = fromEntries2(consoleWhitelist.map(([name, _]) => {
       const method = (...args) => {
         logArray.push([name, ...args]);
       };
@@ -2926,14 +2979,14 @@ ${bodyText}
         baseConsole[name](...args);
       };
       return defineProperty(otherMethod, "name", { value: name }), [name, freeze(otherMethod)];
-    }), causalConsole = fromEntries([...levelMethods, ...otherMethods]);
+    }), causalConsole = fromEntries2([...levelMethods, ...otherMethods]);
     return freeze(causalConsole);
   };
   $h\u200D_once.makeCausalConsole(makeCausalConsole), freeze(makeCausalConsole);
   const filterConsole = (baseConsole, filter, _topic) => {
     const methods = consoleWhitelist.filter(([name, _]) => name in baseConsole).map(([name, severity]) => [name, freeze((...args) => {
       (severity === void 0 || filter.canLog(severity)) && baseConsole[name](...args);
-    })]), filteringConsole = fromEntries(methods);
+    })]), filteringConsole = fromEntries2(methods);
     return freeze(filteringConsole);
   };
   $h\u200D_once.filterConsole(filterConsole), freeze(filterConsole);
@@ -2958,10 +3011,10 @@ ${bodyText}
     }), { console: causalConsole };
   });
 }, ({ imports: $h\u200D_imports, liveVar: $h\u200D_live, onceVar: $h\u200D_once }) => {
-  let WeakMap2, WeakSet2, weaksetHas, weaksetAdd, weakmapSet, weakmapGet, weakmapHas, create3, defineProperties, fromEntries, reflectSet;
-  $h\u200D_imports([["../commons.js", [["WeakMap", [($h\u200D_a) => WeakMap2 = $h\u200D_a]], ["WeakSet", [($h\u200D_a) => WeakSet2 = $h\u200D_a]], ["weaksetHas", [($h\u200D_a) => weaksetHas = $h\u200D_a]], ["weaksetAdd", [($h\u200D_a) => weaksetAdd = $h\u200D_a]], ["weakmapSet", [($h\u200D_a) => weakmapSet = $h\u200D_a]], ["weakmapGet", [($h\u200D_a) => weakmapGet = $h\u200D_a]], ["weakmapHas", [($h\u200D_a) => weakmapHas = $h\u200D_a]], ["create", [($h\u200D_a) => create3 = $h\u200D_a]], ["defineProperties", [($h\u200D_a) => defineProperties = $h\u200D_a]], ["fromEntries", [($h\u200D_a) => fromEntries = $h\u200D_a]], ["reflectSet", [($h\u200D_a) => reflectSet = $h\u200D_a]]]]]);
+  let WeakMap2, WeakSet2, weaksetHas, weaksetAdd, weakmapSet, weakmapGet, weakmapHas, create3, defineProperties, fromEntries2, reflectSet;
+  $h\u200D_imports([["../commons.js", [["WeakMap", [($h\u200D_a) => WeakMap2 = $h\u200D_a]], ["WeakSet", [($h\u200D_a) => WeakSet2 = $h\u200D_a]], ["weaksetHas", [($h\u200D_a) => weaksetHas = $h\u200D_a]], ["weaksetAdd", [($h\u200D_a) => weaksetAdd = $h\u200D_a]], ["weakmapSet", [($h\u200D_a) => weakmapSet = $h\u200D_a]], ["weakmapGet", [($h\u200D_a) => weakmapGet = $h\u200D_a]], ["weakmapHas", [($h\u200D_a) => weakmapHas = $h\u200D_a]], ["create", [($h\u200D_a) => create3 = $h\u200D_a]], ["defineProperties", [($h\u200D_a) => defineProperties = $h\u200D_a]], ["fromEntries", [($h\u200D_a) => fromEntries2 = $h\u200D_a]], ["reflectSet", [($h\u200D_a) => reflectSet = $h\u200D_a]]]]]);
   const safeV8CallSiteMethodNames = ["getTypeName", "getFunctionName", "getMethodName", "getFileName", "getLineNumber", "getColumnNumber", "getEvalOrigin", "isToplevel", "isEval", "isNative", "isConstructor", "isAsync", "getPosition", "getScriptNameOrSourceURL", "toString"], safeV8CallSiteFacet = (callSite) => {
-    const o = fromEntries(safeV8CallSiteMethodNames.map((name) => [name, () => callSite[name]()]));
+    const o = fromEntries2(safeV8CallSiteMethodNames.map((name) => [name, () => callSite[name]()]));
     return create3(o, {});
   }, FILENAME_CENSORS = [/\/node_modules\//, /^(?:node:)?internal\//, /\/packages\/ses\/src\/error\/assert.js$/, /\/packages\/eventual-send\/src\//], filterFileName = (fileName) => {
     if (!fileName)
@@ -3288,1957 +3341,6 @@ ${bodyText}
   assign(globalThis2, { lockdown: makeLockdown(makeCompartmentConstructor, CompartmentPrototype, getAnonymousIntrinsics), Compartment: Compartment2, assert });
 }]);
 
-// pkg/third_party/sourcemap/sourcemap.js
-(function webpackUniversalModuleDefinition(root3, factory) {
-  if (typeof exports === "object" && typeof module === "object") {
-  } else if (typeof define === "function" && define.amd)
-    define(["fs", "path"], factory);
-  else if (typeof exports === "object") {
-  } else
-    root3["sourceMap"] = factory(root3["fs"], root3["path"]);
-})(typeof self !== "undefined" ? self : globalThis, function(__WEBPACK_EXTERNAL_MODULE_10__, __WEBPACK_EXTERNAL_MODULE_11__) {
-  return function(modules) {
-    var installedModules = {};
-    function __webpack_require__(moduleId) {
-      if (installedModules[moduleId]) {
-        return installedModules[moduleId].exports;
-      }
-      var module2 = installedModules[moduleId] = {
-        i: moduleId,
-        l: false,
-        exports: {}
-      };
-      modules[moduleId].call(module2.exports, module2, module2.exports, __webpack_require__);
-      module2.l = true;
-      return module2.exports;
-    }
-    __webpack_require__.m = modules;
-    __webpack_require__.c = installedModules;
-    __webpack_require__.d = function(exports2, name, getter) {
-      if (!__webpack_require__.o(exports2, name)) {
-        Object.defineProperty(exports2, name, {
-          configurable: false,
-          enumerable: true,
-          get: getter
-        });
-      }
-    };
-    __webpack_require__.n = function(module2) {
-      var getter = module2 && module2.__esModule ? function getDefault() {
-        return module2["default"];
-      } : function getModuleExports() {
-        return module2;
-      };
-      __webpack_require__.d(getter, "a", getter);
-      return getter;
-    };
-    __webpack_require__.o = function(object, property) {
-      return Object.prototype.hasOwnProperty.call(object, property);
-    };
-    __webpack_require__.p = "";
-    return __webpack_require__(__webpack_require__.s = 5);
-  }([
-    function(module2, exports2) {
-      function getArg(aArgs, aName, aDefaultValue) {
-        if (aName in aArgs) {
-          return aArgs[aName];
-        } else if (arguments.length === 3) {
-          return aDefaultValue;
-        }
-        throw new Error('"' + aName + '" is a required argument.');
-      }
-      exports2.getArg = getArg;
-      const urlRegexp = /^(?:([\w+\-.]+):)?\/\/(?:(\w+:\w+)@)?([\w.-]*)(?::(\d+))?(.*)$/;
-      const dataUrlRegexp = /^data:.+\,.+$/;
-      function urlParse(aUrl) {
-        const match = aUrl.match(urlRegexp);
-        if (!match) {
-          return null;
-        }
-        return {
-          scheme: match[1],
-          auth: match[2],
-          host: match[3],
-          port: match[4],
-          path: match[5]
-        };
-      }
-      exports2.urlParse = urlParse;
-      function urlGenerate(aParsedUrl) {
-        let url = "";
-        if (aParsedUrl.scheme) {
-          url += aParsedUrl.scheme + ":";
-        }
-        url += "//";
-        if (aParsedUrl.auth) {
-          url += aParsedUrl.auth + "@";
-        }
-        if (aParsedUrl.host) {
-          url += aParsedUrl.host;
-        }
-        if (aParsedUrl.port) {
-          url += ":" + aParsedUrl.port;
-        }
-        if (aParsedUrl.path) {
-          url += aParsedUrl.path;
-        }
-        return url;
-      }
-      exports2.urlGenerate = urlGenerate;
-      const MAX_CACHED_INPUTS = 32;
-      function lruMemoize(f) {
-        const cache = [];
-        return function(input) {
-          for (let i = 0; i < cache.length; i++) {
-            if (cache[i].input === input) {
-              const temp = cache[0];
-              cache[0] = cache[i];
-              cache[i] = temp;
-              return cache[0].result;
-            }
-          }
-          const result = f(input);
-          cache.unshift({
-            input,
-            result
-          });
-          if (cache.length > MAX_CACHED_INPUTS) {
-            cache.pop();
-          }
-          return result;
-        };
-      }
-      const normalize = lruMemoize(function normalize2(aPath) {
-        let path = aPath;
-        const url = urlParse(aPath);
-        if (url) {
-          if (!url.path) {
-            return aPath;
-          }
-          path = url.path;
-        }
-        const isAbsolute = exports2.isAbsolute(path);
-        const parts = [];
-        let start = 0;
-        let i = 0;
-        while (true) {
-          start = i;
-          i = path.indexOf("/", start);
-          if (i === -1) {
-            parts.push(path.slice(start));
-            break;
-          } else {
-            parts.push(path.slice(start, i));
-            while (i < path.length && path[i] === "/") {
-              i++;
-            }
-          }
-        }
-        let up = 0;
-        for (i = parts.length - 1; i >= 0; i--) {
-          const part = parts[i];
-          if (part === ".") {
-            parts.splice(i, 1);
-          } else if (part === "..") {
-            up++;
-          } else if (up > 0) {
-            if (part === "") {
-              parts.splice(i + 1, up);
-              up = 0;
-            } else {
-              parts.splice(i, 2);
-              up--;
-            }
-          }
-        }
-        path = parts.join("/");
-        if (path === "") {
-          path = isAbsolute ? "/" : ".";
-        }
-        if (url) {
-          url.path = path;
-          return urlGenerate(url);
-        }
-        return path;
-      });
-      exports2.normalize = normalize;
-      function join(aRoot, aPath) {
-        if (aRoot === "") {
-          aRoot = ".";
-        }
-        if (aPath === "") {
-          aPath = ".";
-        }
-        const aPathUrl = urlParse(aPath);
-        const aRootUrl = urlParse(aRoot);
-        if (aRootUrl) {
-          aRoot = aRootUrl.path || "/";
-        }
-        if (aPathUrl && !aPathUrl.scheme) {
-          if (aRootUrl) {
-            aPathUrl.scheme = aRootUrl.scheme;
-          }
-          return urlGenerate(aPathUrl);
-        }
-        if (aPathUrl || aPath.match(dataUrlRegexp)) {
-          return aPath;
-        }
-        if (aRootUrl && !aRootUrl.host && !aRootUrl.path) {
-          aRootUrl.host = aPath;
-          return urlGenerate(aRootUrl);
-        }
-        const joined = aPath.charAt(0) === "/" ? aPath : normalize(aRoot.replace(/\/+$/, "") + "/" + aPath);
-        if (aRootUrl) {
-          aRootUrl.path = joined;
-          return urlGenerate(aRootUrl);
-        }
-        return joined;
-      }
-      exports2.join = join;
-      exports2.isAbsolute = function(aPath) {
-        return aPath.charAt(0) === "/" || urlRegexp.test(aPath);
-      };
-      function relative(aRoot, aPath) {
-        if (aRoot === "") {
-          aRoot = ".";
-        }
-        aRoot = aRoot.replace(/\/$/, "");
-        let level = 0;
-        while (aPath.indexOf(aRoot + "/") !== 0) {
-          const index = aRoot.lastIndexOf("/");
-          if (index < 0) {
-            return aPath;
-          }
-          aRoot = aRoot.slice(0, index);
-          if (aRoot.match(/^([^\/]+:\/)?\/*$/)) {
-            return aPath;
-          }
-          ++level;
-        }
-        return Array(level + 1).join("../") + aPath.substr(aRoot.length + 1);
-      }
-      exports2.relative = relative;
-      const supportsNullProto = function() {
-        const obj = /* @__PURE__ */ Object.create(null);
-        return !("__proto__" in obj);
-      }();
-      function identity(s) {
-        return s;
-      }
-      function toSetString(aStr) {
-        if (isProtoString(aStr)) {
-          return "$" + aStr;
-        }
-        return aStr;
-      }
-      exports2.toSetString = supportsNullProto ? identity : toSetString;
-      function fromSetString(aStr) {
-        if (isProtoString(aStr)) {
-          return aStr.slice(1);
-        }
-        return aStr;
-      }
-      exports2.fromSetString = supportsNullProto ? identity : fromSetString;
-      function isProtoString(s) {
-        if (!s) {
-          return false;
-        }
-        const length = s.length;
-        if (length < 9) {
-          return false;
-        }
-        if (s.charCodeAt(length - 1) !== 95 || s.charCodeAt(length - 2) !== 95 || s.charCodeAt(length - 3) !== 111 || s.charCodeAt(length - 4) !== 116 || s.charCodeAt(length - 5) !== 111 || s.charCodeAt(length - 6) !== 114 || s.charCodeAt(length - 7) !== 112 || s.charCodeAt(length - 8) !== 95 || s.charCodeAt(length - 9) !== 95) {
-          return false;
-        }
-        for (let i = length - 10; i >= 0; i--) {
-          if (s.charCodeAt(i) !== 36) {
-            return false;
-          }
-        }
-        return true;
-      }
-      function compareByOriginalPositions(mappingA, mappingB, onlyCompareOriginal) {
-        let cmp = strcmp(mappingA.source, mappingB.source);
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalLine - mappingB.originalLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalColumn - mappingB.originalColumn;
-        if (cmp !== 0 || onlyCompareOriginal) {
-          return cmp;
-        }
-        cmp = mappingA.generatedColumn - mappingB.generatedColumn;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.generatedLine - mappingB.generatedLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        return strcmp(mappingA.name, mappingB.name);
-      }
-      exports2.compareByOriginalPositions = compareByOriginalPositions;
-      function compareByGeneratedPositionsDeflated(mappingA, mappingB, onlyCompareGenerated) {
-        let cmp = mappingA.generatedLine - mappingB.generatedLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.generatedColumn - mappingB.generatedColumn;
-        if (cmp !== 0 || onlyCompareGenerated) {
-          return cmp;
-        }
-        cmp = strcmp(mappingA.source, mappingB.source);
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalLine - mappingB.originalLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalColumn - mappingB.originalColumn;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        return strcmp(mappingA.name, mappingB.name);
-      }
-      exports2.compareByGeneratedPositionsDeflated = compareByGeneratedPositionsDeflated;
-      function strcmp(aStr1, aStr2) {
-        if (aStr1 === aStr2) {
-          return 0;
-        }
-        if (aStr1 === null) {
-          return 1;
-        }
-        if (aStr2 === null) {
-          return -1;
-        }
-        if (aStr1 > aStr2) {
-          return 1;
-        }
-        return -1;
-      }
-      function compareByGeneratedPositionsInflated(mappingA, mappingB) {
-        let cmp = mappingA.generatedLine - mappingB.generatedLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.generatedColumn - mappingB.generatedColumn;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = strcmp(mappingA.source, mappingB.source);
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalLine - mappingB.originalLine;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        cmp = mappingA.originalColumn - mappingB.originalColumn;
-        if (cmp !== 0) {
-          return cmp;
-        }
-        return strcmp(mappingA.name, mappingB.name);
-      }
-      exports2.compareByGeneratedPositionsInflated = compareByGeneratedPositionsInflated;
-      function parseSourceMapInput(str) {
-        return JSON.parse(str.replace(/^\)]}'[^\n]*\n/, ""));
-      }
-      exports2.parseSourceMapInput = parseSourceMapInput;
-      function computeSourceURL(sourceRoot, sourceURL, sourceMapURL) {
-        sourceURL = sourceURL || "";
-        if (sourceRoot) {
-          if (sourceRoot[sourceRoot.length - 1] !== "/" && sourceURL[0] !== "/") {
-            sourceRoot += "/";
-          }
-          sourceURL = sourceRoot + sourceURL;
-        }
-        if (sourceMapURL) {
-          const parsed = urlParse(sourceMapURL);
-          if (!parsed) {
-            throw new Error("sourceMapURL could not be parsed");
-          }
-          if (parsed.path) {
-            const index = parsed.path.lastIndexOf("/");
-            if (index >= 0) {
-              parsed.path = parsed.path.substring(0, index + 1);
-            }
-          }
-          sourceURL = join(urlGenerate(parsed), sourceURL);
-        }
-        return normalize(sourceURL);
-      }
-      exports2.computeSourceURL = computeSourceURL;
-    },
-    function(module2, exports2, __webpack_require__) {
-      const base64VLQ = __webpack_require__(2);
-      const util = __webpack_require__(0);
-      const ArraySet = __webpack_require__(3).ArraySet;
-      const MappingList = __webpack_require__(7).MappingList;
-      class SourceMapGenerator {
-        constructor(aArgs) {
-          if (!aArgs) {
-            aArgs = {};
-          }
-          this._file = util.getArg(aArgs, "file", null);
-          this._sourceRoot = util.getArg(aArgs, "sourceRoot", null);
-          this._skipValidation = util.getArg(aArgs, "skipValidation", false);
-          this._sources = new ArraySet();
-          this._names = new ArraySet();
-          this._mappings = new MappingList();
-          this._sourcesContents = null;
-        }
-        static fromSourceMap(aSourceMapConsumer) {
-          const sourceRoot = aSourceMapConsumer.sourceRoot;
-          const generator = new SourceMapGenerator({
-            file: aSourceMapConsumer.file,
-            sourceRoot
-          });
-          aSourceMapConsumer.eachMapping(function(mapping) {
-            const newMapping = {
-              generated: {
-                line: mapping.generatedLine,
-                column: mapping.generatedColumn
-              }
-            };
-            if (mapping.source != null) {
-              newMapping.source = mapping.source;
-              if (sourceRoot != null) {
-                newMapping.source = util.relative(sourceRoot, newMapping.source);
-              }
-              newMapping.original = {
-                line: mapping.originalLine,
-                column: mapping.originalColumn
-              };
-              if (mapping.name != null) {
-                newMapping.name = mapping.name;
-              }
-            }
-            generator.addMapping(newMapping);
-          });
-          aSourceMapConsumer.sources.forEach(function(sourceFile) {
-            let sourceRelative = sourceFile;
-            if (sourceRoot !== null) {
-              sourceRelative = util.relative(sourceRoot, sourceFile);
-            }
-            if (!generator._sources.has(sourceRelative)) {
-              generator._sources.add(sourceRelative);
-            }
-            const content = aSourceMapConsumer.sourceContentFor(sourceFile);
-            if (content != null) {
-              generator.setSourceContent(sourceFile, content);
-            }
-          });
-          return generator;
-        }
-        addMapping(aArgs) {
-          const generated = util.getArg(aArgs, "generated");
-          const original = util.getArg(aArgs, "original", null);
-          let source = util.getArg(aArgs, "source", null);
-          let name = util.getArg(aArgs, "name", null);
-          if (!this._skipValidation) {
-            this._validateMapping(generated, original, source, name);
-          }
-          if (source != null) {
-            source = String(source);
-            if (!this._sources.has(source)) {
-              this._sources.add(source);
-            }
-          }
-          if (name != null) {
-            name = String(name);
-            if (!this._names.has(name)) {
-              this._names.add(name);
-            }
-          }
-          this._mappings.add({
-            generatedLine: generated.line,
-            generatedColumn: generated.column,
-            originalLine: original != null && original.line,
-            originalColumn: original != null && original.column,
-            source,
-            name
-          });
-        }
-        setSourceContent(aSourceFile, aSourceContent) {
-          let source = aSourceFile;
-          if (this._sourceRoot != null) {
-            source = util.relative(this._sourceRoot, source);
-          }
-          if (aSourceContent != null) {
-            if (!this._sourcesContents) {
-              this._sourcesContents = /* @__PURE__ */ Object.create(null);
-            }
-            this._sourcesContents[util.toSetString(source)] = aSourceContent;
-          } else if (this._sourcesContents) {
-            delete this._sourcesContents[util.toSetString(source)];
-            if (Object.keys(this._sourcesContents).length === 0) {
-              this._sourcesContents = null;
-            }
-          }
-        }
-        applySourceMap(aSourceMapConsumer, aSourceFile, aSourceMapPath) {
-          let sourceFile = aSourceFile;
-          if (aSourceFile == null) {
-            if (aSourceMapConsumer.file == null) {
-              throw new Error(`SourceMapGenerator.prototype.applySourceMap requires either an explicit source file, or the source map's "file" property. Both were omitted.`);
-            }
-            sourceFile = aSourceMapConsumer.file;
-          }
-          const sourceRoot = this._sourceRoot;
-          if (sourceRoot != null) {
-            sourceFile = util.relative(sourceRoot, sourceFile);
-          }
-          const newSources = this._mappings.toArray().length > 0 ? new ArraySet() : this._sources;
-          const newNames = new ArraySet();
-          this._mappings.unsortedForEach(function(mapping) {
-            if (mapping.source === sourceFile && mapping.originalLine != null) {
-              const original = aSourceMapConsumer.originalPositionFor({
-                line: mapping.originalLine,
-                column: mapping.originalColumn
-              });
-              if (original.source != null) {
-                mapping.source = original.source;
-                if (aSourceMapPath != null) {
-                  mapping.source = util.join(aSourceMapPath, mapping.source);
-                }
-                if (sourceRoot != null) {
-                  mapping.source = util.relative(sourceRoot, mapping.source);
-                }
-                mapping.originalLine = original.line;
-                mapping.originalColumn = original.column;
-                if (original.name != null) {
-                  mapping.name = original.name;
-                }
-              }
-            }
-            const source = mapping.source;
-            if (source != null && !newSources.has(source)) {
-              newSources.add(source);
-            }
-            const name = mapping.name;
-            if (name != null && !newNames.has(name)) {
-              newNames.add(name);
-            }
-          }, this);
-          this._sources = newSources;
-          this._names = newNames;
-          aSourceMapConsumer.sources.forEach(function(srcFile) {
-            const content = aSourceMapConsumer.sourceContentFor(srcFile);
-            if (content != null) {
-              if (aSourceMapPath != null) {
-                srcFile = util.join(aSourceMapPath, srcFile);
-              }
-              if (sourceRoot != null) {
-                srcFile = util.relative(sourceRoot, srcFile);
-              }
-              this.setSourceContent(srcFile, content);
-            }
-          }, this);
-        }
-        _validateMapping(aGenerated, aOriginal, aSource, aName) {
-          if (aOriginal && typeof aOriginal.line !== "number" && typeof aOriginal.column !== "number") {
-            throw new Error("original.line and original.column are not numbers -- you probably meant to omit the original mapping entirely and only map the generated position. If so, pass null for the original mapping instead of an object with empty or null values.");
-          }
-          if (aGenerated && "line" in aGenerated && "column" in aGenerated && aGenerated.line > 0 && aGenerated.column >= 0 && !aOriginal && !aSource && !aName) {
-          } else if (aGenerated && "line" in aGenerated && "column" in aGenerated && aOriginal && "line" in aOriginal && "column" in aOriginal && aGenerated.line > 0 && aGenerated.column >= 0 && aOriginal.line > 0 && aOriginal.column >= 0 && aSource) {
-          } else {
-            throw new Error("Invalid mapping: " + JSON.stringify({
-              generated: aGenerated,
-              source: aSource,
-              original: aOriginal,
-              name: aName
-            }));
-          }
-        }
-        _serializeMappings() {
-          let previousGeneratedColumn = 0;
-          let previousGeneratedLine = 1;
-          let previousOriginalColumn = 0;
-          let previousOriginalLine = 0;
-          let previousName = 0;
-          let previousSource = 0;
-          let result = "";
-          let next;
-          let mapping;
-          let nameIdx;
-          let sourceIdx;
-          const mappings = this._mappings.toArray();
-          for (let i = 0, len = mappings.length; i < len; i++) {
-            mapping = mappings[i];
-            next = "";
-            if (mapping.generatedLine !== previousGeneratedLine) {
-              previousGeneratedColumn = 0;
-              while (mapping.generatedLine !== previousGeneratedLine) {
-                next += ";";
-                previousGeneratedLine++;
-              }
-            } else if (i > 0) {
-              if (!util.compareByGeneratedPositionsInflated(mapping, mappings[i - 1])) {
-                continue;
-              }
-              next += ",";
-            }
-            next += base64VLQ.encode(mapping.generatedColumn - previousGeneratedColumn);
-            previousGeneratedColumn = mapping.generatedColumn;
-            if (mapping.source != null) {
-              sourceIdx = this._sources.indexOf(mapping.source);
-              next += base64VLQ.encode(sourceIdx - previousSource);
-              previousSource = sourceIdx;
-              next += base64VLQ.encode(mapping.originalLine - 1 - previousOriginalLine);
-              previousOriginalLine = mapping.originalLine - 1;
-              next += base64VLQ.encode(mapping.originalColumn - previousOriginalColumn);
-              previousOriginalColumn = mapping.originalColumn;
-              if (mapping.name != null) {
-                nameIdx = this._names.indexOf(mapping.name);
-                next += base64VLQ.encode(nameIdx - previousName);
-                previousName = nameIdx;
-              }
-            }
-            result += next;
-          }
-          return result;
-        }
-        _generateSourcesContent(aSources, aSourceRoot) {
-          return aSources.map(function(source) {
-            if (!this._sourcesContents) {
-              return null;
-            }
-            if (aSourceRoot != null) {
-              source = util.relative(aSourceRoot, source);
-            }
-            const key2 = util.toSetString(source);
-            return Object.prototype.hasOwnProperty.call(this._sourcesContents, key2) ? this._sourcesContents[key2] : null;
-          }, this);
-        }
-        toJSON() {
-          const map = {
-            version: this._version,
-            sources: this._sources.toArray(),
-            names: this._names.toArray(),
-            mappings: this._serializeMappings()
-          };
-          if (this._file != null) {
-            map.file = this._file;
-          }
-          if (this._sourceRoot != null) {
-            map.sourceRoot = this._sourceRoot;
-          }
-          if (this._sourcesContents) {
-            map.sourcesContent = this._generateSourcesContent(map.sources, map.sourceRoot);
-          }
-          return map;
-        }
-        toString() {
-          return JSON.stringify(this.toJSON());
-        }
-      }
-      SourceMapGenerator.prototype._version = 3;
-      exports2.SourceMapGenerator = SourceMapGenerator;
-    },
-    function(module2, exports2, __webpack_require__) {
-      const base64 = __webpack_require__(6);
-      const VLQ_BASE_SHIFT = 5;
-      const VLQ_BASE = 1 << VLQ_BASE_SHIFT;
-      const VLQ_BASE_MASK = VLQ_BASE - 1;
-      const VLQ_CONTINUATION_BIT = VLQ_BASE;
-      function toVLQSigned(aValue) {
-        return aValue < 0 ? (-aValue << 1) + 1 : (aValue << 1) + 0;
-      }
-      function fromVLQSigned(aValue) {
-        const isNegative = (aValue & 1) === 1;
-        const shifted = aValue >> 1;
-        return isNegative ? -shifted : shifted;
-      }
-      exports2.encode = function base64VLQ_encode(aValue) {
-        let encoded = "";
-        let digit;
-        let vlq = toVLQSigned(aValue);
-        do {
-          digit = vlq & VLQ_BASE_MASK;
-          vlq >>>= VLQ_BASE_SHIFT;
-          if (vlq > 0) {
-            digit |= VLQ_CONTINUATION_BIT;
-          }
-          encoded += base64.encode(digit);
-        } while (vlq > 0);
-        return encoded;
-      };
-    },
-    function(module2, exports2) {
-      class ArraySet {
-        constructor() {
-          this._array = [];
-          this._set = /* @__PURE__ */ new Map();
-        }
-        static fromArray(aArray, aAllowDuplicates) {
-          const set = new ArraySet();
-          for (let i = 0, len = aArray.length; i < len; i++) {
-            set.add(aArray[i], aAllowDuplicates);
-          }
-          return set;
-        }
-        size() {
-          return this._set.size;
-        }
-        add(aStr, aAllowDuplicates) {
-          const isDuplicate = this.has(aStr);
-          const idx = this._array.length;
-          if (!isDuplicate || aAllowDuplicates) {
-            this._array.push(aStr);
-          }
-          if (!isDuplicate) {
-            this._set.set(aStr, idx);
-          }
-        }
-        has(aStr) {
-          return this._set.has(aStr);
-        }
-        indexOf(aStr) {
-          const idx = this._set.get(aStr);
-          if (idx >= 0) {
-            return idx;
-          }
-          throw new Error('"' + aStr + '" is not in the set.');
-        }
-        at(aIdx) {
-          if (aIdx >= 0 && aIdx < this._array.length) {
-            return this._array[aIdx];
-          }
-          throw new Error("No element indexed by " + aIdx);
-        }
-        toArray() {
-          return this._array.slice();
-        }
-      }
-      exports2.ArraySet = ArraySet;
-    },
-    function(module2, exports2, __webpack_require__) {
-      (function(__dirname) {
-        if (typeof fetch === "function") {
-          let mappingsWasmUrl = null;
-          module2.exports = function readWasm() {
-            if (typeof mappingsWasmUrl !== "string") {
-              throw new Error("You must provide the URL of lib/mappings.wasm by calling SourceMapConsumer.initialize({ 'lib/mappings.wasm': ... }) before using SourceMapConsumer");
-            }
-            return fetch(mappingsWasmUrl).then((response) => response.arrayBuffer());
-          };
-          module2.exports.initialize = (url) => mappingsWasmUrl = url;
-        } else {
-          const fs = __webpack_require__(10);
-          const path = __webpack_require__(11);
-          module2.exports = function readWasm() {
-            return new Promise((resolve2, reject) => {
-              const wasmPath = path.join(__dirname, "mappings.wasm");
-              fs.readFile(wasmPath, null, (error, data) => {
-                if (error) {
-                  reject(error);
-                  return;
-                }
-                resolve2(data.buffer);
-              });
-            });
-          };
-          module2.exports.initialize = (_) => {
-            console.debug("SourceMapConsumer.initialize is a no-op when running in node.js");
-          };
-        }
-      }).call(exports2, "/");
-    },
-    function(module2, exports2, __webpack_require__) {
-      exports2.SourceMapGenerator = __webpack_require__(1).SourceMapGenerator;
-      exports2.SourceMapConsumer = __webpack_require__(8).SourceMapConsumer;
-      exports2.SourceNode = __webpack_require__(13).SourceNode;
-    },
-    function(module2, exports2) {
-      const intToCharMap = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split("");
-      exports2.encode = function(number) {
-        if (0 <= number && number < intToCharMap.length) {
-          return intToCharMap[number];
-        }
-        throw new TypeError("Must be between 0 and 63: " + number);
-      };
-    },
-    function(module2, exports2, __webpack_require__) {
-      const util = __webpack_require__(0);
-      function generatedPositionAfter(mappingA, mappingB) {
-        const lineA = mappingA.generatedLine;
-        const lineB = mappingB.generatedLine;
-        const columnA = mappingA.generatedColumn;
-        const columnB = mappingB.generatedColumn;
-        return lineB > lineA || lineB == lineA && columnB >= columnA || util.compareByGeneratedPositionsInflated(mappingA, mappingB) <= 0;
-      }
-      class MappingList {
-        constructor() {
-          this._array = [];
-          this._sorted = true;
-          this._last = { generatedLine: -1, generatedColumn: 0 };
-        }
-        unsortedForEach(aCallback, aThisArg) {
-          this._array.forEach(aCallback, aThisArg);
-        }
-        add(aMapping) {
-          if (generatedPositionAfter(this._last, aMapping)) {
-            this._last = aMapping;
-            this._array.push(aMapping);
-          } else {
-            this._sorted = false;
-            this._array.push(aMapping);
-          }
-        }
-        toArray() {
-          if (!this._sorted) {
-            this._array.sort(util.compareByGeneratedPositionsInflated);
-            this._sorted = true;
-          }
-          return this._array;
-        }
-      }
-      exports2.MappingList = MappingList;
-    },
-    function(module2, exports2, __webpack_require__) {
-      const util = __webpack_require__(0);
-      const binarySearch = __webpack_require__(9);
-      const ArraySet = __webpack_require__(3).ArraySet;
-      const base64VLQ = __webpack_require__(2);
-      const readWasm = __webpack_require__(4);
-      const wasm = __webpack_require__(12);
-      const INTERNAL = Symbol("smcInternal");
-      class SourceMapConsumer {
-        constructor(aSourceMap, aSourceMapURL) {
-          if (aSourceMap == INTERNAL) {
-            return Promise.resolve(this);
-          }
-          return _factory(aSourceMap, aSourceMapURL);
-        }
-        static initialize(opts) {
-          readWasm.initialize(opts["lib/mappings.wasm"]);
-        }
-        static fromSourceMap(aSourceMap, aSourceMapURL) {
-          return _factoryBSM(aSourceMap, aSourceMapURL);
-        }
-        static with(rawSourceMap, sourceMapUrl, f) {
-          let consumer = null;
-          const promise = new SourceMapConsumer(rawSourceMap, sourceMapUrl);
-          return promise.then((c) => {
-            consumer = c;
-            return f(c);
-          }).then((x) => {
-            if (consumer) {
-              consumer.destroy();
-            }
-            return x;
-          }, (e) => {
-            if (consumer) {
-              consumer.destroy();
-            }
-            throw e;
-          });
-        }
-        _parseMappings(aStr, aSourceRoot) {
-          throw new Error("Subclasses must implement _parseMappings");
-        }
-        eachMapping(aCallback, aContext, aOrder) {
-          throw new Error("Subclasses must implement eachMapping");
-        }
-        allGeneratedPositionsFor(aArgs) {
-          throw new Error("Subclasses must implement allGeneratedPositionsFor");
-        }
-        destroy() {
-          throw new Error("Subclasses must implement destroy");
-        }
-      }
-      SourceMapConsumer.prototype._version = 3;
-      SourceMapConsumer.GENERATED_ORDER = 1;
-      SourceMapConsumer.ORIGINAL_ORDER = 2;
-      SourceMapConsumer.GREATEST_LOWER_BOUND = 1;
-      SourceMapConsumer.LEAST_UPPER_BOUND = 2;
-      exports2.SourceMapConsumer = SourceMapConsumer;
-      class BasicSourceMapConsumer extends SourceMapConsumer {
-        constructor(aSourceMap, aSourceMapURL) {
-          return super(INTERNAL).then((that) => {
-            let sourceMap2 = aSourceMap;
-            if (typeof aSourceMap === "string") {
-              sourceMap2 = util.parseSourceMapInput(aSourceMap);
-            }
-            const version = util.getArg(sourceMap2, "version");
-            let sources = util.getArg(sourceMap2, "sources");
-            const names = util.getArg(sourceMap2, "names", []);
-            let sourceRoot = util.getArg(sourceMap2, "sourceRoot", null);
-            const sourcesContent = util.getArg(sourceMap2, "sourcesContent", null);
-            const mappings = util.getArg(sourceMap2, "mappings");
-            const file = util.getArg(sourceMap2, "file", null);
-            if (version != that._version) {
-              throw new Error("Unsupported version: " + version);
-            }
-            if (sourceRoot) {
-              sourceRoot = util.normalize(sourceRoot);
-            }
-            sources = sources.map(String).map(util.normalize).map(function(source) {
-              return sourceRoot && util.isAbsolute(sourceRoot) && util.isAbsolute(source) ? util.relative(sourceRoot, source) : source;
-            });
-            that._names = ArraySet.fromArray(names.map(String), true);
-            that._sources = ArraySet.fromArray(sources, true);
-            that._absoluteSources = that._sources.toArray().map(function(s) {
-              return util.computeSourceURL(sourceRoot, s, aSourceMapURL);
-            });
-            that.sourceRoot = sourceRoot;
-            that.sourcesContent = sourcesContent;
-            that._mappings = mappings;
-            that._sourceMapURL = aSourceMapURL;
-            that.file = file;
-            that._computedColumnSpans = false;
-            that._mappingsPtr = 0;
-            that._wasm = null;
-            return wasm().then((w) => {
-              that._wasm = w;
-              return that;
-            });
-          });
-        }
-        _findSourceIndex(aSource) {
-          let relativeSource = aSource;
-          if (this.sourceRoot != null) {
-            relativeSource = util.relative(this.sourceRoot, relativeSource);
-          }
-          if (this._sources.has(relativeSource)) {
-            return this._sources.indexOf(relativeSource);
-          }
-          for (let i = 0; i < this._absoluteSources.length; ++i) {
-            if (this._absoluteSources[i] == aSource) {
-              return i;
-            }
-          }
-          return -1;
-        }
-        static fromSourceMap(aSourceMap, aSourceMapURL) {
-          return new BasicSourceMapConsumer(aSourceMap.toString());
-        }
-        get sources() {
-          return this._absoluteSources.slice();
-        }
-        _getMappingsPtr() {
-          if (this._mappingsPtr === 0) {
-            this._parseMappings(this._mappings, this.sourceRoot);
-          }
-          return this._mappingsPtr;
-        }
-        _parseMappings(aStr, aSourceRoot) {
-          const size = aStr.length;
-          const mappingsBufPtr = this._wasm.exports.allocate_mappings(size);
-          const mappingsBuf = new Uint8Array(this._wasm.exports.memory.buffer, mappingsBufPtr, size);
-          for (let i = 0; i < size; i++) {
-            mappingsBuf[i] = aStr.charCodeAt(i);
-          }
-          const mappingsPtr = this._wasm.exports.parse_mappings(mappingsBufPtr);
-          if (!mappingsPtr) {
-            const error = this._wasm.exports.get_last_error();
-            let msg = `Error parsing mappings (code ${error}): `;
-            switch (error) {
-              case 1:
-                msg += "the mappings contained a negative line, column, source index, or name index";
-                break;
-              case 2:
-                msg += "the mappings contained a number larger than 2**32";
-                break;
-              case 3:
-                msg += "reached EOF while in the middle of parsing a VLQ";
-                break;
-              case 4:
-                msg += "invalid base 64 character while parsing a VLQ";
-                break;
-              default:
-                msg += "unknown error code";
-                break;
-            }
-            throw new Error(msg);
-          }
-          this._mappingsPtr = mappingsPtr;
-        }
-        eachMapping(aCallback, aContext, aOrder) {
-          const context = aContext || null;
-          const order = aOrder || SourceMapConsumer.GENERATED_ORDER;
-          const sourceRoot = this.sourceRoot;
-          this._wasm.withMappingCallback((mapping) => {
-            if (mapping.source !== null) {
-              mapping.source = this._sources.at(mapping.source);
-              mapping.source = util.computeSourceURL(sourceRoot, mapping.source, this._sourceMapURL);
-              if (mapping.name !== null) {
-                mapping.name = this._names.at(mapping.name);
-              }
-            }
-            aCallback.call(context, mapping);
-          }, () => {
-            switch (order) {
-              case SourceMapConsumer.GENERATED_ORDER:
-                this._wasm.exports.by_generated_location(this._getMappingsPtr());
-                break;
-              case SourceMapConsumer.ORIGINAL_ORDER:
-                this._wasm.exports.by_original_location(this._getMappingsPtr());
-                break;
-              default:
-                throw new Error("Unknown order of iteration.");
-            }
-          });
-        }
-        allGeneratedPositionsFor(aArgs) {
-          let source = util.getArg(aArgs, "source");
-          const originalLine = util.getArg(aArgs, "line");
-          const originalColumn = aArgs.column || 0;
-          source = this._findSourceIndex(source);
-          if (source < 0) {
-            return [];
-          }
-          if (originalLine < 1) {
-            throw new Error("Line numbers must be >= 1");
-          }
-          if (originalColumn < 0) {
-            throw new Error("Column numbers must be >= 0");
-          }
-          const mappings = [];
-          this._wasm.withMappingCallback((m) => {
-            let lastColumn = m.lastGeneratedColumn;
-            if (this._computedColumnSpans && lastColumn === null) {
-              lastColumn = Infinity;
-            }
-            mappings.push({
-              line: m.generatedLine,
-              column: m.generatedColumn,
-              lastColumn
-            });
-          }, () => {
-            this._wasm.exports.all_generated_locations_for(this._getMappingsPtr(), source, originalLine - 1, "column" in aArgs, originalColumn);
-          });
-          return mappings;
-        }
-        destroy() {
-          if (this._mappingsPtr !== 0) {
-            this._wasm.exports.free_mappings(this._mappingsPtr);
-            this._mappingsPtr = 0;
-          }
-        }
-        computeColumnSpans() {
-          if (this._computedColumnSpans) {
-            return;
-          }
-          this._wasm.exports.compute_column_spans(this._getMappingsPtr());
-          this._computedColumnSpans = true;
-        }
-        originalPositionFor(aArgs) {
-          const needle = {
-            generatedLine: util.getArg(aArgs, "line"),
-            generatedColumn: util.getArg(aArgs, "column")
-          };
-          if (needle.generatedLine < 1) {
-            throw new Error("Line numbers must be >= 1");
-          }
-          if (needle.generatedColumn < 0) {
-            throw new Error("Column numbers must be >= 0");
-          }
-          let bias = util.getArg(aArgs, "bias", SourceMapConsumer.GREATEST_LOWER_BOUND);
-          if (bias == null) {
-            bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
-          }
-          let mapping;
-          this._wasm.withMappingCallback((m) => mapping = m, () => {
-            this._wasm.exports.original_location_for(this._getMappingsPtr(), needle.generatedLine - 1, needle.generatedColumn, bias);
-          });
-          if (mapping) {
-            if (mapping.generatedLine === needle.generatedLine) {
-              let source = util.getArg(mapping, "source", null);
-              if (source !== null) {
-                source = this._sources.at(source);
-                source = util.computeSourceURL(this.sourceRoot, source, this._sourceMapURL);
-              }
-              let name = util.getArg(mapping, "name", null);
-              if (name !== null) {
-                name = this._names.at(name);
-              }
-              return {
-                source,
-                line: util.getArg(mapping, "originalLine", null),
-                column: util.getArg(mapping, "originalColumn", null),
-                name
-              };
-            }
-          }
-          return {
-            source: null,
-            line: null,
-            column: null,
-            name: null
-          };
-        }
-        hasContentsOfAllSources() {
-          if (!this.sourcesContent) {
-            return false;
-          }
-          return this.sourcesContent.length >= this._sources.size() && !this.sourcesContent.some(function(sc) {
-            return sc == null;
-          });
-        }
-        sourceContentFor(aSource, nullOnMissing) {
-          if (!this.sourcesContent) {
-            return null;
-          }
-          const index = this._findSourceIndex(aSource);
-          if (index >= 0) {
-            return this.sourcesContent[index];
-          }
-          let relativeSource = aSource;
-          if (this.sourceRoot != null) {
-            relativeSource = util.relative(this.sourceRoot, relativeSource);
-          }
-          let url;
-          if (this.sourceRoot != null && (url = util.urlParse(this.sourceRoot))) {
-            const fileUriAbsPath = relativeSource.replace(/^file:\/\//, "");
-            if (url.scheme == "file" && this._sources.has(fileUriAbsPath)) {
-              return this.sourcesContent[this._sources.indexOf(fileUriAbsPath)];
-            }
-            if ((!url.path || url.path == "/") && this._sources.has("/" + relativeSource)) {
-              return this.sourcesContent[this._sources.indexOf("/" + relativeSource)];
-            }
-          }
-          if (nullOnMissing) {
-            return null;
-          }
-          throw new Error('"' + relativeSource + '" is not in the SourceMap.');
-        }
-        generatedPositionFor(aArgs) {
-          let source = util.getArg(aArgs, "source");
-          source = this._findSourceIndex(source);
-          if (source < 0) {
-            return {
-              line: null,
-              column: null,
-              lastColumn: null
-            };
-          }
-          const needle = {
-            source,
-            originalLine: util.getArg(aArgs, "line"),
-            originalColumn: util.getArg(aArgs, "column")
-          };
-          if (needle.originalLine < 1) {
-            throw new Error("Line numbers must be >= 1");
-          }
-          if (needle.originalColumn < 0) {
-            throw new Error("Column numbers must be >= 0");
-          }
-          let bias = util.getArg(aArgs, "bias", SourceMapConsumer.GREATEST_LOWER_BOUND);
-          if (bias == null) {
-            bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
-          }
-          let mapping;
-          this._wasm.withMappingCallback((m) => mapping = m, () => {
-            this._wasm.exports.generated_location_for(this._getMappingsPtr(), needle.source, needle.originalLine - 1, needle.originalColumn, bias);
-          });
-          if (mapping) {
-            if (mapping.source === needle.source) {
-              let lastColumn = mapping.lastGeneratedColumn;
-              if (this._computedColumnSpans && lastColumn === null) {
-                lastColumn = Infinity;
-              }
-              return {
-                line: util.getArg(mapping, "generatedLine", null),
-                column: util.getArg(mapping, "generatedColumn", null),
-                lastColumn
-              };
-            }
-          }
-          return {
-            line: null,
-            column: null,
-            lastColumn: null
-          };
-        }
-      }
-      BasicSourceMapConsumer.prototype.consumer = SourceMapConsumer;
-      exports2.BasicSourceMapConsumer = BasicSourceMapConsumer;
-      class IndexedSourceMapConsumer extends SourceMapConsumer {
-        constructor(aSourceMap, aSourceMapURL) {
-          return super(INTERNAL).then((that) => {
-            let sourceMap2 = aSourceMap;
-            if (typeof aSourceMap === "string") {
-              sourceMap2 = util.parseSourceMapInput(aSourceMap);
-            }
-            const version = util.getArg(sourceMap2, "version");
-            const sections = util.getArg(sourceMap2, "sections");
-            if (version != that._version) {
-              throw new Error("Unsupported version: " + version);
-            }
-            that._sources = new ArraySet();
-            that._names = new ArraySet();
-            that.__generatedMappings = null;
-            that.__originalMappings = null;
-            that.__generatedMappingsUnsorted = null;
-            that.__originalMappingsUnsorted = null;
-            let lastOffset = {
-              line: -1,
-              column: 0
-            };
-            return Promise.all(sections.map((s) => {
-              if (s.url) {
-                throw new Error("Support for url field in sections not implemented.");
-              }
-              const offset = util.getArg(s, "offset");
-              const offsetLine = util.getArg(offset, "line");
-              const offsetColumn = util.getArg(offset, "column");
-              if (offsetLine < lastOffset.line || offsetLine === lastOffset.line && offsetColumn < lastOffset.column) {
-                throw new Error("Section offsets must be ordered and non-overlapping.");
-              }
-              lastOffset = offset;
-              const cons = new SourceMapConsumer(util.getArg(s, "map"), aSourceMapURL);
-              return cons.then((consumer) => {
-                return {
-                  generatedOffset: {
-                    generatedLine: offsetLine + 1,
-                    generatedColumn: offsetColumn + 1
-                  },
-                  consumer
-                };
-              });
-            })).then((s) => {
-              that._sections = s;
-              return that;
-            });
-          });
-        }
-        get _generatedMappings() {
-          if (!this.__generatedMappings) {
-            this._sortGeneratedMappings();
-          }
-          return this.__generatedMappings;
-        }
-        get _originalMappings() {
-          if (!this.__originalMappings) {
-            this._sortOriginalMappings();
-          }
-          return this.__originalMappings;
-        }
-        get _generatedMappingsUnsorted() {
-          if (!this.__generatedMappingsUnsorted) {
-            this._parseMappings(this._mappings, this.sourceRoot);
-          }
-          return this.__generatedMappingsUnsorted;
-        }
-        get _originalMappingsUnsorted() {
-          if (!this.__originalMappingsUnsorted) {
-            this._parseMappings(this._mappings, this.sourceRoot);
-          }
-          return this.__originalMappingsUnsorted;
-        }
-        _sortGeneratedMappings() {
-          const mappings = this._generatedMappingsUnsorted;
-          mappings.sort(util.compareByGeneratedPositionsDeflated);
-          this.__generatedMappings = mappings;
-        }
-        _sortOriginalMappings() {
-          const mappings = this._originalMappingsUnsorted;
-          mappings.sort(util.compareByOriginalPositions);
-          this.__originalMappings = mappings;
-        }
-        get sources() {
-          const sources = [];
-          for (let i = 0; i < this._sections.length; i++) {
-            for (let j = 0; j < this._sections[i].consumer.sources.length; j++) {
-              sources.push(this._sections[i].consumer.sources[j]);
-            }
-          }
-          return sources;
-        }
-        originalPositionFor(aArgs) {
-          const needle = {
-            generatedLine: util.getArg(aArgs, "line"),
-            generatedColumn: util.getArg(aArgs, "column")
-          };
-          const sectionIndex = binarySearch.search(needle, this._sections, function(aNeedle, section2) {
-            const cmp = aNeedle.generatedLine - section2.generatedOffset.generatedLine;
-            if (cmp) {
-              return cmp;
-            }
-            return aNeedle.generatedColumn - section2.generatedOffset.generatedColumn;
-          });
-          const section = this._sections[sectionIndex];
-          if (!section) {
-            return {
-              source: null,
-              line: null,
-              column: null,
-              name: null
-            };
-          }
-          return section.consumer.originalPositionFor({
-            line: needle.generatedLine - (section.generatedOffset.generatedLine - 1),
-            column: needle.generatedColumn - (section.generatedOffset.generatedLine === needle.generatedLine ? section.generatedOffset.generatedColumn - 1 : 0),
-            bias: aArgs.bias
-          });
-        }
-        hasContentsOfAllSources() {
-          return this._sections.every(function(s) {
-            return s.consumer.hasContentsOfAllSources();
-          });
-        }
-        sourceContentFor(aSource, nullOnMissing) {
-          for (let i = 0; i < this._sections.length; i++) {
-            const section = this._sections[i];
-            const content = section.consumer.sourceContentFor(aSource, true);
-            if (content) {
-              return content;
-            }
-          }
-          if (nullOnMissing) {
-            return null;
-          }
-          throw new Error('"' + aSource + '" is not in the SourceMap.');
-        }
-        generatedPositionFor(aArgs) {
-          for (let i = 0; i < this._sections.length; i++) {
-            const section = this._sections[i];
-            if (section.consumer._findSourceIndex(util.getArg(aArgs, "source")) === -1) {
-              continue;
-            }
-            const generatedPosition = section.consumer.generatedPositionFor(aArgs);
-            if (generatedPosition) {
-              const ret = {
-                line: generatedPosition.line + (section.generatedOffset.generatedLine - 1),
-                column: generatedPosition.column + (section.generatedOffset.generatedLine === generatedPosition.line ? section.generatedOffset.generatedColumn - 1 : 0)
-              };
-              return ret;
-            }
-          }
-          return {
-            line: null,
-            column: null
-          };
-        }
-        _parseMappings(aStr, aSourceRoot) {
-          const generatedMappings = this.__generatedMappingsUnsorted = [];
-          const originalMappings = this.__originalMappingsUnsorted = [];
-          for (let i = 0; i < this._sections.length; i++) {
-            const section = this._sections[i];
-            const sectionMappings = [];
-            section.consumer.eachMapping((m) => sectionMappings.push(m));
-            for (let j = 0; j < sectionMappings.length; j++) {
-              const mapping = sectionMappings[j];
-              let source = util.computeSourceURL(section.consumer.sourceRoot, null, this._sourceMapURL);
-              this._sources.add(source);
-              source = this._sources.indexOf(source);
-              let name = null;
-              if (mapping.name) {
-                this._names.add(mapping.name);
-                name = this._names.indexOf(mapping.name);
-              }
-              const adjustedMapping = {
-                source,
-                generatedLine: mapping.generatedLine + (section.generatedOffset.generatedLine - 1),
-                generatedColumn: mapping.generatedColumn + (section.generatedOffset.generatedLine === mapping.generatedLine ? section.generatedOffset.generatedColumn - 1 : 0),
-                originalLine: mapping.originalLine,
-                originalColumn: mapping.originalColumn,
-                name
-              };
-              generatedMappings.push(adjustedMapping);
-              if (typeof adjustedMapping.originalLine === "number") {
-                originalMappings.push(adjustedMapping);
-              }
-            }
-          }
-        }
-        eachMapping(aCallback, aContext, aOrder) {
-          const context = aContext || null;
-          const order = aOrder || SourceMapConsumer.GENERATED_ORDER;
-          let mappings;
-          switch (order) {
-            case SourceMapConsumer.GENERATED_ORDER:
-              mappings = this._generatedMappings;
-              break;
-            case SourceMapConsumer.ORIGINAL_ORDER:
-              mappings = this._originalMappings;
-              break;
-            default:
-              throw new Error("Unknown order of iteration.");
-          }
-          const sourceRoot = this.sourceRoot;
-          mappings.map(function(mapping) {
-            let source = null;
-            if (mapping.source !== null) {
-              source = this._sources.at(mapping.source);
-              source = util.computeSourceURL(sourceRoot, source, this._sourceMapURL);
-            }
-            return {
-              source,
-              generatedLine: mapping.generatedLine,
-              generatedColumn: mapping.generatedColumn,
-              originalLine: mapping.originalLine,
-              originalColumn: mapping.originalColumn,
-              name: mapping.name === null ? null : this._names.at(mapping.name)
-            };
-          }, this).forEach(aCallback, context);
-        }
-        _findMapping(aNeedle, aMappings, aLineName, aColumnName, aComparator, aBias) {
-          if (aNeedle[aLineName] <= 0) {
-            throw new TypeError("Line must be greater than or equal to 1, got " + aNeedle[aLineName]);
-          }
-          if (aNeedle[aColumnName] < 0) {
-            throw new TypeError("Column must be greater than or equal to 0, got " + aNeedle[aColumnName]);
-          }
-          return binarySearch.search(aNeedle, aMappings, aComparator, aBias);
-        }
-        allGeneratedPositionsFor(aArgs) {
-          const line = util.getArg(aArgs, "line");
-          const needle = {
-            source: util.getArg(aArgs, "source"),
-            originalLine: line,
-            originalColumn: util.getArg(aArgs, "column", 0)
-          };
-          needle.source = this._findSourceIndex(needle.source);
-          if (needle.source < 0) {
-            return [];
-          }
-          if (needle.originalLine < 1) {
-            throw new Error("Line numbers must be >= 1");
-          }
-          if (needle.originalColumn < 0) {
-            throw new Error("Column numbers must be >= 0");
-          }
-          const mappings = [];
-          let index = this._findMapping(needle, this._originalMappings, "originalLine", "originalColumn", util.compareByOriginalPositions, binarySearch.LEAST_UPPER_BOUND);
-          if (index >= 0) {
-            let mapping = this._originalMappings[index];
-            if (aArgs.column === void 0) {
-              const originalLine = mapping.originalLine;
-              while (mapping && mapping.originalLine === originalLine) {
-                let lastColumn = mapping.lastGeneratedColumn;
-                if (this._computedColumnSpans && lastColumn === null) {
-                  lastColumn = Infinity;
-                }
-                mappings.push({
-                  line: util.getArg(mapping, "generatedLine", null),
-                  column: util.getArg(mapping, "generatedColumn", null),
-                  lastColumn
-                });
-                mapping = this._originalMappings[++index];
-              }
-            } else {
-              const originalColumn = mapping.originalColumn;
-              while (mapping && mapping.originalLine === line && mapping.originalColumn == originalColumn) {
-                let lastColumn = mapping.lastGeneratedColumn;
-                if (this._computedColumnSpans && lastColumn === null) {
-                  lastColumn = Infinity;
-                }
-                mappings.push({
-                  line: util.getArg(mapping, "generatedLine", null),
-                  column: util.getArg(mapping, "generatedColumn", null),
-                  lastColumn
-                });
-                mapping = this._originalMappings[++index];
-              }
-            }
-          }
-          return mappings;
-        }
-        destroy() {
-          for (let i = 0; i < this._sections.length; i++) {
-            this._sections[i].consumer.destroy();
-          }
-        }
-      }
-      exports2.IndexedSourceMapConsumer = IndexedSourceMapConsumer;
-      function _factory(aSourceMap, aSourceMapURL) {
-        let sourceMap2 = aSourceMap;
-        if (typeof aSourceMap === "string") {
-          sourceMap2 = util.parseSourceMapInput(aSourceMap);
-        }
-        const consumer = sourceMap2.sections != null ? new IndexedSourceMapConsumer(sourceMap2, aSourceMapURL) : new BasicSourceMapConsumer(sourceMap2, aSourceMapURL);
-        return Promise.resolve(consumer);
-      }
-      function _factoryBSM(aSourceMap, aSourceMapURL) {
-        return BasicSourceMapConsumer.fromSourceMap(aSourceMap, aSourceMapURL);
-      }
-    },
-    function(module2, exports2) {
-      exports2.GREATEST_LOWER_BOUND = 1;
-      exports2.LEAST_UPPER_BOUND = 2;
-      function recursiveSearch(aLow, aHigh, aNeedle, aHaystack, aCompare, aBias) {
-        const mid = Math.floor((aHigh - aLow) / 2) + aLow;
-        const cmp = aCompare(aNeedle, aHaystack[mid], true);
-        if (cmp === 0) {
-          return mid;
-        } else if (cmp > 0) {
-          if (aHigh - mid > 1) {
-            return recursiveSearch(mid, aHigh, aNeedle, aHaystack, aCompare, aBias);
-          }
-          if (aBias == exports2.LEAST_UPPER_BOUND) {
-            return aHigh < aHaystack.length ? aHigh : -1;
-          }
-          return mid;
-        }
-        if (mid - aLow > 1) {
-          return recursiveSearch(aLow, mid, aNeedle, aHaystack, aCompare, aBias);
-        }
-        if (aBias == exports2.LEAST_UPPER_BOUND) {
-          return mid;
-        }
-        return aLow < 0 ? -1 : aLow;
-      }
-      exports2.search = function search(aNeedle, aHaystack, aCompare, aBias) {
-        if (aHaystack.length === 0) {
-          return -1;
-        }
-        let index = recursiveSearch(-1, aHaystack.length, aNeedle, aHaystack, aCompare, aBias || exports2.GREATEST_LOWER_BOUND);
-        if (index < 0) {
-          return -1;
-        }
-        while (index - 1 >= 0) {
-          if (aCompare(aHaystack[index], aHaystack[index - 1], true) !== 0) {
-            break;
-          }
-          --index;
-        }
-        return index;
-      };
-    },
-    function(module2, exports2) {
-      module2.exports = __WEBPACK_EXTERNAL_MODULE_10__;
-    },
-    function(module2, exports2) {
-      module2.exports = __WEBPACK_EXTERNAL_MODULE_11__;
-    },
-    function(module2, exports2, __webpack_require__) {
-      const readWasm = __webpack_require__(4);
-      function Mapping() {
-        this.generatedLine = 0;
-        this.generatedColumn = 0;
-        this.lastGeneratedColumn = null;
-        this.source = null;
-        this.originalLine = null;
-        this.originalColumn = null;
-        this.name = null;
-      }
-      let cachedWasm = null;
-      module2.exports = function wasm() {
-        if (cachedWasm) {
-          return cachedWasm;
-        }
-        const callbackStack = [];
-        cachedWasm = readWasm().then((buffer) => {
-          return WebAssembly.instantiate(buffer, {
-            env: {
-              mapping_callback(generatedLine, generatedColumn, hasLastGeneratedColumn, lastGeneratedColumn, hasOriginal, source, originalLine, originalColumn, hasName, name) {
-                const mapping = new Mapping();
-                mapping.generatedLine = generatedLine + 1;
-                mapping.generatedColumn = generatedColumn;
-                if (hasLastGeneratedColumn) {
-                  mapping.lastGeneratedColumn = lastGeneratedColumn - 1;
-                }
-                if (hasOriginal) {
-                  mapping.source = source;
-                  mapping.originalLine = originalLine + 1;
-                  mapping.originalColumn = originalColumn;
-                  if (hasName) {
-                    mapping.name = name;
-                  }
-                }
-                callbackStack[callbackStack.length - 1](mapping);
-              },
-              start_all_generated_locations_for() {
-                console.time("all_generated_locations_for");
-              },
-              end_all_generated_locations_for() {
-                console.timeEnd("all_generated_locations_for");
-              },
-              start_compute_column_spans() {
-                console.time("compute_column_spans");
-              },
-              end_compute_column_spans() {
-                console.timeEnd("compute_column_spans");
-              },
-              start_generated_location_for() {
-                console.time("generated_location_for");
-              },
-              end_generated_location_for() {
-                console.timeEnd("generated_location_for");
-              },
-              start_original_location_for() {
-                console.time("original_location_for");
-              },
-              end_original_location_for() {
-                console.timeEnd("original_location_for");
-              },
-              start_parse_mappings() {
-                console.time("parse_mappings");
-              },
-              end_parse_mappings() {
-                console.timeEnd("parse_mappings");
-              },
-              start_sort_by_generated_location() {
-                console.time("sort_by_generated_location");
-              },
-              end_sort_by_generated_location() {
-                console.timeEnd("sort_by_generated_location");
-              },
-              start_sort_by_original_location() {
-                console.time("sort_by_original_location");
-              },
-              end_sort_by_original_location() {
-                console.timeEnd("sort_by_original_location");
-              }
-            }
-          });
-        }).then((Wasm) => {
-          return {
-            exports: Wasm.instance.exports,
-            withMappingCallback: (mappingCallback, f) => {
-              callbackStack.push(mappingCallback);
-              try {
-                f();
-              } finally {
-                callbackStack.pop();
-              }
-            }
-          };
-        }).then(null, (e) => {
-          cachedWasm = null;
-          throw e;
-        });
-        return cachedWasm;
-      };
-    },
-    function(module2, exports2, __webpack_require__) {
-      const SourceMapGenerator = __webpack_require__(1).SourceMapGenerator;
-      const util = __webpack_require__(0);
-      const REGEX_NEWLINE = /(\r?\n)/;
-      const NEWLINE_CODE = 10;
-      const isSourceNode = "$$$isSourceNode$$$";
-      class SourceNode {
-        constructor(aLine, aColumn, aSource, aChunks, aName) {
-          this.children = [];
-          this.sourceContents = {};
-          this.line = aLine == null ? null : aLine;
-          this.column = aColumn == null ? null : aColumn;
-          this.source = aSource == null ? null : aSource;
-          this.name = aName == null ? null : aName;
-          this[isSourceNode] = true;
-          if (aChunks != null)
-            this.add(aChunks);
-        }
-        static fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer, aRelativePath) {
-          const node = new SourceNode();
-          const remainingLines = aGeneratedCode.split(REGEX_NEWLINE);
-          let remainingLinesIndex = 0;
-          const shiftNextLine = function() {
-            const lineContents = getNextLine();
-            const newLine = getNextLine() || "";
-            return lineContents + newLine;
-            function getNextLine() {
-              return remainingLinesIndex < remainingLines.length ? remainingLines[remainingLinesIndex++] : void 0;
-            }
-          };
-          let lastGeneratedLine = 1, lastGeneratedColumn = 0;
-          let lastMapping = null;
-          let nextLine;
-          aSourceMapConsumer.eachMapping(function(mapping) {
-            if (lastMapping !== null) {
-              if (lastGeneratedLine < mapping.generatedLine) {
-                addMappingWithCode(lastMapping, shiftNextLine());
-                lastGeneratedLine++;
-                lastGeneratedColumn = 0;
-              } else {
-                nextLine = remainingLines[remainingLinesIndex] || "";
-                const code = nextLine.substr(0, mapping.generatedColumn - lastGeneratedColumn);
-                remainingLines[remainingLinesIndex] = nextLine.substr(mapping.generatedColumn - lastGeneratedColumn);
-                lastGeneratedColumn = mapping.generatedColumn;
-                addMappingWithCode(lastMapping, code);
-                lastMapping = mapping;
-                return;
-              }
-            }
-            while (lastGeneratedLine < mapping.generatedLine) {
-              node.add(shiftNextLine());
-              lastGeneratedLine++;
-            }
-            if (lastGeneratedColumn < mapping.generatedColumn) {
-              nextLine = remainingLines[remainingLinesIndex] || "";
-              node.add(nextLine.substr(0, mapping.generatedColumn));
-              remainingLines[remainingLinesIndex] = nextLine.substr(mapping.generatedColumn);
-              lastGeneratedColumn = mapping.generatedColumn;
-            }
-            lastMapping = mapping;
-          }, this);
-          if (remainingLinesIndex < remainingLines.length) {
-            if (lastMapping) {
-              addMappingWithCode(lastMapping, shiftNextLine());
-            }
-            node.add(remainingLines.splice(remainingLinesIndex).join(""));
-          }
-          aSourceMapConsumer.sources.forEach(function(sourceFile) {
-            const content = aSourceMapConsumer.sourceContentFor(sourceFile);
-            if (content != null) {
-              if (aRelativePath != null) {
-                sourceFile = util.join(aRelativePath, sourceFile);
-              }
-              node.setSourceContent(sourceFile, content);
-            }
-          });
-          return node;
-          function addMappingWithCode(mapping, code) {
-            if (mapping === null || mapping.source === void 0) {
-              node.add(code);
-            } else {
-              const source = aRelativePath ? util.join(aRelativePath, mapping.source) : mapping.source;
-              node.add(new SourceNode(mapping.originalLine, mapping.originalColumn, source, code, mapping.name));
-            }
-          }
-        }
-        add(aChunk) {
-          if (Array.isArray(aChunk)) {
-            aChunk.forEach(function(chunk) {
-              this.add(chunk);
-            }, this);
-          } else if (aChunk[isSourceNode] || typeof aChunk === "string") {
-            if (aChunk) {
-              this.children.push(aChunk);
-            }
-          } else {
-            throw new TypeError("Expected a SourceNode, string, or an array of SourceNodes and strings. Got " + aChunk);
-          }
-          return this;
-        }
-        prepend(aChunk) {
-          if (Array.isArray(aChunk)) {
-            for (let i = aChunk.length - 1; i >= 0; i--) {
-              this.prepend(aChunk[i]);
-            }
-          } else if (aChunk[isSourceNode] || typeof aChunk === "string") {
-            this.children.unshift(aChunk);
-          } else {
-            throw new TypeError("Expected a SourceNode, string, or an array of SourceNodes and strings. Got " + aChunk);
-          }
-          return this;
-        }
-        walk(aFn) {
-          let chunk;
-          for (let i = 0, len = this.children.length; i < len; i++) {
-            chunk = this.children[i];
-            if (chunk[isSourceNode]) {
-              chunk.walk(aFn);
-            } else if (chunk !== "") {
-              aFn(chunk, {
-                source: this.source,
-                line: this.line,
-                column: this.column,
-                name: this.name
-              });
-            }
-          }
-        }
-        join(aSep) {
-          let newChildren;
-          let i;
-          const len = this.children.length;
-          if (len > 0) {
-            newChildren = [];
-            for (i = 0; i < len - 1; i++) {
-              newChildren.push(this.children[i]);
-              newChildren.push(aSep);
-            }
-            newChildren.push(this.children[i]);
-            this.children = newChildren;
-          }
-          return this;
-        }
-        replaceRight(aPattern, aReplacement) {
-          const lastChild = this.children[this.children.length - 1];
-          if (lastChild[isSourceNode]) {
-            lastChild.replaceRight(aPattern, aReplacement);
-          } else if (typeof lastChild === "string") {
-            this.children[this.children.length - 1] = lastChild.replace(aPattern, aReplacement);
-          } else {
-            this.children.push("".replace(aPattern, aReplacement));
-          }
-          return this;
-        }
-        setSourceContent(aSourceFile, aSourceContent) {
-          this.sourceContents[util.toSetString(aSourceFile)] = aSourceContent;
-        }
-        walkSourceContents(aFn) {
-          for (let i = 0, len = this.children.length; i < len; i++) {
-            if (this.children[i][isSourceNode]) {
-              this.children[i].walkSourceContents(aFn);
-            }
-          }
-          const sources = Object.keys(this.sourceContents);
-          for (let i = 0, len = sources.length; i < len; i++) {
-            aFn(util.fromSetString(sources[i]), this.sourceContents[sources[i]]);
-          }
-        }
-        toString() {
-          let str = "";
-          this.walk(function(chunk) {
-            str += chunk;
-          });
-          return str;
-        }
-        toStringWithSourceMap(aArgs) {
-          const generated = {
-            code: "",
-            line: 1,
-            column: 0
-          };
-          const map = new SourceMapGenerator(aArgs);
-          let sourceMappingActive = false;
-          let lastOriginalSource = null;
-          let lastOriginalLine = null;
-          let lastOriginalColumn = null;
-          let lastOriginalName = null;
-          this.walk(function(chunk, original) {
-            generated.code += chunk;
-            if (original.source !== null && original.line !== null && original.column !== null) {
-              if (lastOriginalSource !== original.source || lastOriginalLine !== original.line || lastOriginalColumn !== original.column || lastOriginalName !== original.name) {
-                map.addMapping({
-                  source: original.source,
-                  original: {
-                    line: original.line,
-                    column: original.column
-                  },
-                  generated: {
-                    line: generated.line,
-                    column: generated.column
-                  },
-                  name: original.name
-                });
-              }
-              lastOriginalSource = original.source;
-              lastOriginalLine = original.line;
-              lastOriginalColumn = original.column;
-              lastOriginalName = original.name;
-              sourceMappingActive = true;
-            } else if (sourceMappingActive) {
-              map.addMapping({
-                generated: {
-                  line: generated.line,
-                  column: generated.column
-                }
-              });
-              lastOriginalSource = null;
-              sourceMappingActive = false;
-            }
-            for (let idx = 0, length = chunk.length; idx < length; idx++) {
-              if (chunk.charCodeAt(idx) === NEWLINE_CODE) {
-                generated.line++;
-                generated.column = 0;
-                if (idx + 1 === length) {
-                  lastOriginalSource = null;
-                  sourceMappingActive = false;
-                } else if (sourceMappingActive) {
-                  map.addMapping({
-                    source: original.source,
-                    original: {
-                      line: original.line,
-                      column: original.column
-                    },
-                    generated: {
-                      line: generated.line,
-                      column: generated.column
-                    },
-                    name: original.name
-                  });
-                }
-              } else {
-                generated.column++;
-              }
-            }
-          });
-          this.walkSourceContents(function(sourceFile, sourceContent) {
-            map.setSourceContent(sourceFile, sourceContent);
-          });
-          return { code: generated.code, map };
-        }
-      }
-      exports2.SourceNode = SourceNode;
-    }
-  ]);
-});
-
-// pkg/third_party/inlinesourcemap/inline-source-map.js
-function offsetMapping(mapping, offset) {
-  return { line: offset.line + mapping.line, column: offset.column + mapping.column };
-}
-function newlinesIn(src) {
-  if (!src)
-    return 0;
-  var newlines = src.match(/\n/g);
-  return newlines ? newlines.length : 0;
-}
-function Generator(opts) {
-  opts = opts || {};
-  this.generator = new sourceMap.SourceMapGenerator({ file: opts.file || "", sourceRoot: opts.sourceRoot || "" });
-  this.sourcesContent = void 0;
-  this.opts = opts;
-}
-Generator.prototype.addMappings = function(sourceFile, mappings, offset) {
-  var generator = this.generator;
-  offset = offset || {};
-  offset.line = offset.hasOwnProperty("line") ? offset.line : 0;
-  offset.column = offset.hasOwnProperty("column") ? offset.column : 0;
-  mappings.forEach(function(m) {
-    generator.addMapping({
-      source: m.original ? sourceFile : void 0,
-      original: m.original,
-      generated: offsetMapping(m.generated, offset)
-    });
-  });
-  return this;
-};
-Generator.prototype.addGeneratedMappings = function(sourceFile, source, offset) {
-  var mappings = [], linesToGenerate = newlinesIn(source) + 1;
-  for (var line = 1; line <= linesToGenerate; line++) {
-    var location = { line, column: 0 };
-    mappings.push({ original: location, generated: location });
-  }
-  return this.addMappings(sourceFile, mappings, offset);
-};
-Generator.prototype.addSourceContent = function(sourceFile, sourcesContent) {
-  this.generator.setSourceContent(sourceFile, sourcesContent);
-  this.sourcesContent = this.sourcesContent || {};
-  this.sourcesContent[sourceFile] = sourcesContent;
-  return this;
-};
-Generator.prototype.base64Encode = function() {
-  var map = this.toString();
-  return btoa(map);
-};
-Generator.prototype.inlineMappingUrl = function() {
-  var charset = this.opts.charset || "utf-8";
-  return "//# sourceMappingURL=data:application/json;charset=" + charset + ";base64," + this.base64Encode();
-};
-Generator.prototype.toJSON = function() {
-  var map = this.generator.toJSON();
-  if (!this.sourcesContent)
-    return map;
-  var toSourcesContent = function(s) {
-    if (typeof this.sourcesContent[s] === "string") {
-      return this.sourcesContent[s];
-    } else {
-      return null;
-    }
-  }.bind(this);
-  map.sourcesContent = map.sources.map(toSourcesContent);
-  return map;
-};
-Generator.prototype.toString = function() {
-  return JSON.stringify(this);
-};
-Generator.prototype._mappings = function() {
-  return this.generator._mappings._array;
-};
-Generator.prototype.gen = function() {
-  return this.generator;
-};
-
 // pkg/js/isolation/ses.js
 var requiredLog = logFactory(true, "SES", "goldenrod");
 var log10 = logFactory(logFactory.flags.ses, "SES", "goldenrod");
@@ -5291,6 +3393,27 @@ var requireImplFactory = async (kind, options) => {
   return globalThis.harden(factory);
 };
 var repackageImplFactory = (factory, kind) => {
+  const { constNames, rewriteConsts, funcNames, rewriteFuncs } = collectDecls(factory);
+  const proto = `{${[...constNames, ...funcNames]}}`;
+  const moduleRewrite = `
+({log, ...utils}) => {
+// protect utils
+harden(utils);
+// these are just handy
+const {assign, keys, entries, values, create} = Object;
+// declarations
+${[...rewriteConsts, ...rewriteFuncs].join("\n\n")}
+// hardened Object (map) of declarations,
+// suitable to be a prototype
+return harden(${proto});
+// name the file for debuggers
+//# sourceURL=${pathForKind(kind).split("/").pop()}-(Sandboxed)
+};
+  `;
+  log10("rewritten:\n\n", moduleRewrite);
+  return particleCompartment.evaluate(moduleRewrite);
+};
+var collectDecls = (factory) => {
   const props = Object.entries(factory);
   const isFunc = ([n, p]) => typeof p === "function";
   const funcs = props.filter(isFunc);
@@ -5300,30 +3423,18 @@ var repackageImplFactory = (factory, kind) => {
     const body = code.replace("async ", "").replace("function ", "");
     return `${async2 ? "async" : ""} function ${body};`;
   });
-  const funcMembers = funcs.map(([n]) => n);
+  const funcNames = funcs.map(([n]) => n);
   const consts = props.filter((item) => !isFunc(item));
   const rewriteConsts = consts.map(([n, p]) => {
     return `const ${n} = \`${p}\`;`;
   });
-  const constMembers = consts.map(([n]) => n);
-  const proto = `{${[...constMembers, ...funcMembers]}}`;
-  const rewrite = `
-({log, ...utils}) => {
-
-harden(utils);
-const {assign, keys, entries, values, create} = Object;
-
-${[...rewriteConsts, ...rewriteFuncs].join("\n\n")}
-
-return harden(${proto});
-
-};
-  `;
-  var gen = new Generator({ charset: "utf-8" }).addSourceContent(pathForKind(kind), rewrite).addGeneratedMappings(pathForKind(kind), rewrite, { line: 0, column: 0 });
-  const inlineSourceMap = gen.inlineMappingUrl();
-  const rewriteWithSourceMap = rewrite + inlineSourceMap + "\n";
-  log10("rewritten:\n\n", rewriteWithSourceMap);
-  return particleCompartment.evaluate(rewriteWithSourceMap);
+  const constNames = consts.map(([n]) => n);
+  return {
+    constNames,
+    rewriteConsts,
+    funcNames,
+    rewriteFuncs
+  };
 };
 var privateCtor;
 var requireParticle = async () => {
@@ -5368,6 +3479,7 @@ __export(utils_exports, {
   makeCapName: () => makeCapName,
   makeId: () => makeId,
   makeName: () => makeName,
+  matches: () => matches,
   prob: () => prob,
   shallowMerge: () => shallowMerge,
   shallowUpdate: () => shallowUpdate

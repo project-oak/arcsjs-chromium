@@ -33,9 +33,15 @@
 
 <script type="module">
   // component support
-  import {Surface} from './surface/allowlist.js';
+  import {Surface, TensorFlowService} from './surface/allowlist.js';
   // make a surface (shadowRoot is on)
   window.surface = new Surface(document.body, true);
+  window.surface.service = async (req) => {
+   if (req.kind === 'TensorFlowService') {
+      return TensorFlowService.receive(req);
+   }
+  };
+
   // be heard
   window.parent.postMessage('surface', '*');
   console.warn('surface is online');
