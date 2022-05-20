@@ -9,6 +9,33 @@
 import {Runtime, Params, Chef, Decorator, Surfaces, Services, logFactory, pathForKind} from '../../arcs-import.js';
 import {loadIbis, best_solutions_to_json} from 'https://project-oak.github.io/arcsjs-provable/ibis/ibis.js';
 
+const {keys} = Object;
+const json = v => JSON.stringify(v);
+const pretty = v => JSON.stringify(v, null, '  ');
+export const stateCapture = () => {
+  const {user} = globalThis.App;
+  const data = keys(user.stores).reduce((data, key) => {
+    const omit = [
+      // these are kinda big
+      'nodeTypes',
+      'pipelines',
+      'myItems',
+      // personal
+      'favoriteItems',
+      // depends on rendering
+      'mobilenet1ClassifierResults'
+    ].includes(key);
+    if (!omit) {
+      //console.warn(key);
+      const {meta, data: value} = user.stores[key];
+      data[key] = {meta, value};
+    }
+    return data;
+  }, {});
+  //console.warn('state', data);
+  return json(data);
+};
+
 // logger
 const log = logFactory(logFactory.flags.app || true, 'App', 'mediumorchid');
 // document-relative path to surface bootstrap
@@ -19,6 +46,22 @@ const root = document.body;
 const {getPrototypeOf} = Object;
 // trivial app
 const App = window.App = {};
+
+export const DevToolsService = async (runtime, host, request) => {
+  const {msg, data} = request;
+  if (services[msg]) {
+    return services[msg](data);
+  } else {
+    log(`no handler for "${msg}"`);
+  }
+};
+const services = {
+  async stateCapture() {
+    return await stateCapture();
+  }
+};
+
+Services.user.add(DevToolsService);
 
 const boot = async fontData => {
   const recipe = await acquireRecipe();

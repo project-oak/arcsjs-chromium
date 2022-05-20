@@ -21,3 +21,4 @@ await import(`${dom}/mwc/mwc.js`);
 await import(`${dom}/material-xen/material-xen.js`);
 // bespoke elements
 await import(`./photo-histogram-element.js`);
+export const {TensorFlowService} = await import('../../env/arcsjs-apps/pkg/Library/TensorFlow/TensorFlowService.js');

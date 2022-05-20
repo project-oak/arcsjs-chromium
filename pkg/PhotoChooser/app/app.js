@@ -6,7 +6,9 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-import {Runtime, Params, Chef, Decorator, Surfaces, Services, logFactory, pathForKind} from '../../arcs-import.js';
+import {Runtime, Params, Chef, Decorator, Surfaces, Services, utils, pathForKind, logFactory} from '../../arcs-import.js';
+// const {logFactory} = utils;
+
 import {ExifService, EXIF_MSG} from './ExifService.js';
 
 // logger
@@ -65,7 +67,7 @@ const bootSystem = async (system, recipe, photoData) => {
     getPrototypeOf(arc).storeChanged.call(arc, storeId, store);
     if (storeId === 'pickedPhoto') {
       console.warn('pickedPhoto', store.data);
-      const photo = photoData.find(r => r.photoUrl === store.data);
+      const photo = photoData.find(r => r.photoUrl === store.data.photoUrl);
       emitResult(photo);
     };
   };

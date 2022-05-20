@@ -17,7 +17,7 @@ export async function getFileSystemPhotoSet() {
   return files.map(file => ({
     fullName: file.name,
     photoUrl: URL.createObjectURL(file),
-    starRating: 5
+    starRating: 1
   }));
 }
 
