@@ -8,7 +8,9 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-//import 'https://arcsjs-apps.web.app/Library/TensorFlow/tensorflowjs-import.js';
+const PolicyRenderer = {
+  $kind: '$local/PolicyRenderer',
+};
 
 export const QuillFontPickerRecipe = {
   $meta: {
@@ -36,6 +38,11 @@ export const QuillFontPickerRecipe = {
     }
   },
   DevTools: {
-    $kind: "https://arcsjs-apps.web.app/Library/DevTools/DevTools.js"
+    $kind: "../../../pkg/env/arcsjs-apps/pkg/Library/DevTools/DevTools.js",
+    $slots: {
+      policy: {
+        PolicyRenderer
+      }
+    }
   }
 };
