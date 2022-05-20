@@ -49,6 +49,7 @@ const App = window.App = {};
 
 export const DevToolsService = async (runtime, host, request) => {
   const {msg, data} = request;
+  log(`service req ${request}`);
   if (services[msg]) {
     return services[msg](data);
   } else {
@@ -58,10 +59,14 @@ export const DevToolsService = async (runtime, host, request) => {
 const services = {
   async stateCapture() {
     return await stateCapture();
+  },
+
+  async currentPolicy() {
+    return window.App.resolvedPolicy;
   }
 };
 
-Services.user.add(DevToolsService);
+Services.system.add(DevToolsService);
 
 const boot = async fontData => {
   const recipe = await acquireRecipe();
@@ -103,6 +108,7 @@ const bootSystem = async (system, recipe, {fontData, suggested}) => {
       }
   );
   const resolved_policy = best_solutions_to_json([policy]);
+  window.App['resolvedPolicy'] = JSON.parse(resolved_policy);
   const neededClaims = JSON.parse(resolved_policy).claims.find(r => r[0] == 'runtime_event')[1];
 
   console.log(resolved_policy);

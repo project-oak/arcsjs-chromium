@@ -4,3 +4,8 @@ node_modules
 *.iml
 *.iws
 *.ipr
+/.idea/.gitignore
+/firebase-debug.log
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
