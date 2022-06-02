@@ -22,4 +22,5 @@ await import(`${dom}/mwc/mwc.js`);
 await import(`${dom}/material-xen/material-xen.js`);
 await import(`${dom}/data-explorer/data-item.js`);
 await import('https://arcsjs-apps.web.app/Library/DevTools/resource-view.js');
+await import(`./graphviz-element.js`);
 await import(`${dom}/surfaces/xen/surface-walker.js`);

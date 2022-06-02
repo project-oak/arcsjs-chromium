@@ -71,6 +71,10 @@
     return {pickedFont: {font: key, claims: ['user_action']}};
   },
 
+  onBadFontClick({eventlet: {key}}) {
+    return {pickedFont: {font: key}};
+  },
+
   onChange({eventlet: {value}}, state) {
     assign(state, { searchFilter: value});
   },
@@ -152,19 +156,19 @@
 </template>
 
 <template font_t>
-  <div font toolbar on-click="onFontClick" key="{{key}}">
-    <span flex name xen:style="{{displayStyle}}">{{fullName}}</span>
-    <span sample xen:style="{{displayStyle}}">Sample</span>
+  <div font toolbar>
+    <span flex name xen:style="{{displayStyle}}" on-click="onFontClick" key="{{key}}">{{fullName}}</span>
+    <span sample xen:style="{{displayStyle}}" on-click="onBadFontClick" key="{{key}}">Sample</span>
   </div>
 </template>
 
 <template family_t>
   <div fonts>
     <expandable-item single="{{single}}">
-      <span slot="top" font toolbar on-click="onFontClick" key="{{key}}">
+      <span slot="top" font toolbar >
         <span style="font-size: 15px; line-height: 10px;">&#9734;</span>
-        <span flex name xen:style="{{displayStyle}}">{{family}}</span>
-        <span sample xen:style="{{displayStyle}}">Sample</span>
+        <span flex name xen:style="{{displayStyle}}" on-click="onFontClick" key="{{key}}">{{family}}</span>
+        <span sample xen:style="{{displayStyle}}" on-click="onBadFontClick" key="{{key}}">Sample</span>
       </span>
       <div slot="bottom" flex>
         <div rows repeat="font_t">{{fonts}}</div>
