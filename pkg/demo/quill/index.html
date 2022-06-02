@@ -58,14 +58,19 @@
   }
   [menu][show] {
     opacity: 1;
-    z-index: 9999;
+    z-index: 9998;
   }
 </style>
+  <script>
+    function dismissError() {
+      document.getElementById('error').removeAttribute('show');
+    }
+  </script>
 <!-- head -->
 </head>
 <body>
 <div id="chooser" chooser></div>
-<div id="error" error></div>
+<div id="error" error onclick="dismissError();"></div>
 
 <div id="above-container">
   <div class="container">

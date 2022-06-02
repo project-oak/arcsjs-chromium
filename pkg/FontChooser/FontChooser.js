@@ -88,8 +88,7 @@ const makeListener = (iframe, root, handler, suggested) => {
         fontData: privateFontData,
         suggested: suggested
       }, '*');
-    }
-    if (e.data?.font) {
+    } else {
       root.removeAttribute('show');
       setTimeout(() => {
         window.removeEventListener('message', listener);

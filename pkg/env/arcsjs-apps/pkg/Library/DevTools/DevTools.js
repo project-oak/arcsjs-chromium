@@ -81,7 +81,7 @@ const template = html`
     <div flex title>Tools</div>
     <mwc-icon-button icon="refresh" on-click="onRefreshClick"></mwc-icon-button>
   </div>
-  <mxc-tab-pages dark flex tabs="Stores,Particles,Graph,Policy">
+  <mxc-tab-pages dark flex tabs="Stores,Particles,Context,Graph,Policy">
     <data-explorer flex scrolling object="{{stores}}" expand></data-explorer>
     <data-explorer flex scrolling object="{{particles}}" expand></data-explorer>
     <div flex rows>
@@ -89,7 +89,11 @@ const template = html`
       <!-- <data-graph flex></data-graph> -->
     </div>
     <div flex scrolling>
-      <div slot="policy"></div>
+      <graphviz-element dot="{{currentDot}}"></graphviz-element>
+    </div>
+    <div flex scrolling>
+      <div slot="policy">
+      </div>
     </div>
   </mxc-tab-pages>
 </div>
@@ -109,9 +113,11 @@ return {
   },
   async refresh(state, service) {
     const context = await service({msg: 'request-context'});
+    const currentPolicy = await service({msg: 'currentPolicy'});
     assign(state, context);
+    assign(state, {currentPolicy: currentPolicy});
   },
-  render(inputs, {runtime, showTools}) {
+  render(inputs, {runtime, showTools, currentPolicy}) {
     // there may be other runtimes too
     const users = {runtime, ...runtime?.users};
     const context = this.renderContext(users);
@@ -120,7 +126,8 @@ return {
       showTools,
       particles: this.renderAllHosts(users),
       stores,
-      context
+      context,
+      currentDot: currentPolicy?.dot_output
     };
   },
   map(object, visitor) {

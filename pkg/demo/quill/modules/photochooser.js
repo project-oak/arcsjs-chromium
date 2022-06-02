@@ -25,7 +25,7 @@ class PhotoChooser extends Module {
     const photo = await choosePhoto('PhotosByDate', 'chooser', true, 12);
     const range = this.quill.getSelection(true);
     const delta = new Delta().retain(range.index).delete(range.length);
-    delta.insert({image: photo.photoUrl}, {style: "transform: rotate(" + photo.privateData.rotation + "deg)"});
+    delta.insert({image: photo.photoUrl}, {style: "transform: rotate(" + (photo?.privateData?.rotation || 0) + "deg)"});
     this.quill.updateContents(delta, 'user');
     this.quill.setSelection(
         range.index + 1,

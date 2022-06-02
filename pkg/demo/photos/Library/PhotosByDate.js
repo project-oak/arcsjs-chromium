@@ -28,7 +28,6 @@
     const rating = privateData.starRating || starRating || 1;
     const rotation = privateData.rotation || 0;
     const tags = privateData.tags || [];
-    log(foo);
     if (tags.length == 0) {
       perceive(photoUrl, state.service).then((x) => {
         if (x && x.classifierResults

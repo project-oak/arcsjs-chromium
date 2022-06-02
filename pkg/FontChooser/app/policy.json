@@ -1,6 +1,8 @@
 {
   "flags": {
-    "planning": false
+    "planning": false,
+    "dot": true,
+    "d3": true
   },
   "capabilities": [
     ["write", "read"]
@@ -77,7 +79,7 @@
         ["runtime_items", "private"],
          ["it_render", "private"],
         ["d_decorated", "downstream_p_decorator"],
-        ["f_selected", "downstream_p_filter"],
+        ["f_selected", "downstream_p_filter"],              
         ["surface_event", "downstream_user_action"],
         ["runtime_event", "user_action"]
       ],
