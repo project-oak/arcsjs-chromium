@@ -112,6 +112,8 @@ const bootSystem = async (system, recipe, {fontData, suggested}) => {
   const neededClaims = JSON.parse(resolved_policy).claims.find(r => r[0] == 'runtime_event')[1];
 
   console.log(resolved_policy);
+
+
   // look for data egress
   arc.storeChanged = (storeId, store) => {
     getPrototypeOf(arc).storeChanged.call(arc, storeId, store);
