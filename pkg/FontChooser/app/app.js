@@ -97,22 +97,26 @@ const bootSystem = async (system, recipe, {fontData, suggested}) => {
   if (recipe.$stores.suggested) {
     recipe.$stores.suggested.$value = suggested;
   }
-  const policy = await fetch('./policy.json').then(t => t.text());
-  await init(
-      'https://project-oak.github.io/arcsjs-provable/ibis/pkg/ibis_bg.wasm'/*,
+
+  let neededClaims;
+  if (recipe.$meta.$policy) {
+    const policy = await fetch(pathForKind(recipe.$meta.$policy)).then(t => t.text());
+    await init(
+        'https://project-oak.github.io/arcsjs-provable/ibis/pkg/ibis_bg.wasm'/*,
       (status_text, style) => {
         console.log(status_text);
       },
       (version_info) => {
         console.log(version_info);
       }*/
-  );
-  const resolved_policy = run_ibis(policy);
-  window.App['resolvedPolicy'] = JSON.parse(resolved_policy);
-  const neededClaims = JSON.parse(resolved_policy).claims.find(r => r[0] == 'runtime_event')[1];
+    );
+    const resolved_policy = run_ibis(policy);
+    window.App['resolvedPolicy'] = JSON.parse(resolved_policy);
+    neededClaims = JSON.parse(resolved_policy).claims.find(
+        r => r[0] == 'runtime_event')[1];
 
-  console.log(resolved_policy);
-
+    console.log(resolved_policy);
+  }
 
   // look for data egress
   arc.storeChanged = (storeId, store) => {

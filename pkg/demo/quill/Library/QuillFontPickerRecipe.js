@@ -14,8 +14,10 @@ const PolicyRenderer = {
 
 export const QuillFontPickerRecipe = {
   $meta: {
-    description: 'Quill Font Picker'
+    description: 'Quill Font Picker',
+    $policy: '$local/policy.json'
   },
+
   $stores: {
     fonts: {
       $type: `[Key]`,
@@ -38,7 +40,7 @@ export const QuillFontPickerRecipe = {
     }
   },
   DevTools: {
-    $kind: "../../../pkg/env/arcsjs-apps/pkg/Library/DevTools/DevTools.js",
+    $kind: "$local/DevTools.js",
     $slots: {
       policy: {
         PolicyRenderer

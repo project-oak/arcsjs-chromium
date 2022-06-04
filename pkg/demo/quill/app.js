@@ -38,18 +38,18 @@ window.chooseFont = async (kind, container) => {
     chooser: container,
     webFonts: fonts,
     suggested: [
-      'DejaVu Sans Oblique',
-      'DejaVu Sans Bold Oblique',
-      'DejaVu Sans Condensed Oblique',
-      'DejaVu Sans Condensed Bold Oblique',
-      'DejaVu Sans Mono Bold Oblique',
-      'DejaVu Sans Mono Oblique',
       'Arial',
       'Futura',
       'Comic Sans MS',
       'Papyrus',
       'Impact',
-      'Chalkduster'
+      'Chalkduster',
+      'DejaVu Sans Oblique',
+      'DejaVu Sans Bold Oblique',
+      'DejaVu Sans Condensed Oblique',
+      'DejaVu Sans Condensed Bold Oblique',
+      'DejaVu Sans Mono Bold Oblique',
+      'DejaVu Sans Mono Oblique'
     ]
   };
   const font = await FontChooser.requestFont(args);
