@@ -8,7 +8,7 @@
 
 globalThis.config = {
   // false to use CDN resources
-  localArcsjs: true,
+  localArcsjs: false,
   // identifies the p2p meeting place, peers must be in this same aeon
   // also identifies offline storage node
   aeon: 'local-fonts/00x00',

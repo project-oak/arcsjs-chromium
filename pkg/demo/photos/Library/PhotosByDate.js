@@ -122,7 +122,7 @@
       msg: 'toolClassify',
       data: {
         imageRef,
-        modelUrl: 'http://localhost:9876/arcsjs-chromium/pkg/env/arcsjs-apps/pkg/Library/TensorFlow/tfjs/mobilenet.min.js',
+        modelUrl: 'https://arcsjs-apps.web.app/Library/TensorFlow/tfjs/mobilenet.min.js',
         modelKind: 'mobilenet'
       }
     };

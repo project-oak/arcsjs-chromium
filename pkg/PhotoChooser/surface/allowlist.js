@@ -9,7 +9,7 @@
 // Path discovery
 import {Paths} from '../../arcs-import.js';
 // discover library path
-const dom = Paths.resolve(`$library/Common/dom`);
+const dom = Paths.resolve(`$library/Dom`);
 // import CSS loader
 const {loadCss} = await import(`${dom}/dom.js`);
 // provide common surface implementation
@@ -17,9 +17,9 @@ export const {XenSurface: Surface} = await import(`${dom}/surfaces/xen/xen-surfa
 // material icon font
 await loadCss(`${dom}/material-icon-font/icons.css`);
 // Material Web Components
-await import(`${dom}/mwc/mwc.js`);
+await import(`${dom}/mwc/mwc.min.js`);
 await import(`${dom}/material-xen/material-xen.js`);
 // bespoke elements
 await import(`./photo-histogram-element.js`);
 // export const {TensorFlowService} = await import('../../env/arcsjs-apps/pkg/Library/TensorFlow/TensorFlowService.js');
-export const {TensorFlowService} = await import('https://arcsjs-apps.web.app/Library/TensorFlow/TensorFlowService.js');
+export const {TensorFlowService} = await import(Paths.resolve('$library/TensorFlow/TensorFlowService.js'));

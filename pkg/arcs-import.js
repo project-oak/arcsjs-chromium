@@ -7,11 +7,13 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 const locale = globalThis.config?.localArcsjs ? 'local': 'cdn';
-const path = `./env/arcs-${locale}.js`;
-export const {
-  logFactory, utils, pathForKind, Params,
-  Runtime, Services, Paths, Surfaces, Decorator,
-  Chef,
-  FirebasePersistor, LocalStoragePersistor, awaitLoginChange,
-  RecipeService
-} = await import(path);
+export * from './env/arcs-cdn.js';
+
+// export const {
+//   logFactory, utils, pathForKind, Params,
+//   Runtime, Services, Paths, Surfaces, Decorator,
+//   Chef,
+//   FirebasePersistor, LocalStoragePersistor, awaitLoginChange,
+//   RecipeService
+// } = Core;
+

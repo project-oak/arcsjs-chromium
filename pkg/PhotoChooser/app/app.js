@@ -6,9 +6,13 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-import {Runtime, Params, Chef, Decorator, Surfaces, Services, utils, pathForKind, logFactory} from '../../arcs-import.js';
-// const {logFactory} = utils;
 
+import {Runtime, Chef, Decorator, logFactory, pathForKind, importModules} from '../../arcs-import.js';
+const {Services, Params, Surfaces} = await importModules(async p => import(p), [
+  '$library/App/services.js',
+  '$library/App/params.js',
+  '$library/Dom/surfaces/xen/xen-surfaces.js'
+]);
 import {ExifService, EXIF_MSG} from './ExifService.js';
 
 // logger
