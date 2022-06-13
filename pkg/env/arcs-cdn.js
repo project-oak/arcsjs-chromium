@@ -8,4 +8,5 @@
 // CDN
 // load tensorflowjs before SES
 //import 'https://arcsjs-apps.web.app/Library/TensorFlow/tensorflowjs-import.js';
-export * from 'https://arcsjs-apps.web.app/Library/Common/common.js';
+export * from 'https://arcsjs.web.app/0.0.1/core/arcsjs-core.js';
+export {importModules} from 'https://arcsjs.web.app/0.0.1/support/arcsjs-support.js';
