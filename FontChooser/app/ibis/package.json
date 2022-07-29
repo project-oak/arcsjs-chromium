@@ -1,0 +1,18 @@
+{
+  "name": "arcsjs-ibis",
+  "description": "Ibis - a knowledge engine for type checking asynchronously communicating modules",
+  "version": "0.1.1",
+  "license": "See LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project-oak/arcsjs-provable"
+  },
+  "files": [
+    "ibis_bg.wasm",
+    "ibis/ibis.js",
+    "ibis/ibis.d.ts"
+  ],
+  "module": "ibis.js",
+  "types": "ibis.d.ts",
+  "sideEffects": false
+}

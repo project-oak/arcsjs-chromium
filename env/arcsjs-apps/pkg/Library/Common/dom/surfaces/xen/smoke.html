@@ -1,0 +1,39 @@
+<!doctype html>
+<!--
+ Copyright (c) 2022 Google LLC All rights reserved.
+ Use of this source code is governed by a BSD-style
+ license that can be found in the LICENSE file.
+-->
+
+<meta name="viewport" content="width=device-width, initial-scale=0.86, maximum-scale=3.0, minimum-scale=0.86">
+
+<base href="../../../">
+
+<style>
+  html, body {
+    height: 100%;
+  }
+  body {
+    display: flex;
+    overflow: hidden;
+    box-sizing: border-box;
+    margin: 0;
+  }
+</style>
+
+<script type="module">
+  import {Surfaces} from './env/surfaces/xen/xen-surfaces.js';
+  (async () => {
+    const surface = await Surfaces.create('dom', document.body);
+    const composer = await surface.createComposer('test');
+    const packet = {
+      id: 'test',
+      container: 'root',
+      content: {
+        template: '<div style="padding: 12px;">{{msg}}</div>',
+        model: {msg: 'Hello World'}
+      }
+    };
+    composer.render(packet);
+  })();
+</script>

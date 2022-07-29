@@ -1,0 +1,60 @@
+<!doctype html>
+<!--
+ Copyright 2022 Google LLC
+ 
+ Use of this source code is governed by a BSD-style
+ license that can be found in the LICENSE file or at
+ https://developers.google.com/open-source/licenses/bsd
+-->
+
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.86, maximum-scale=3.0, minimum-scale=0.86, viewport-fit=cover">
+
+<style>
+  [chooser] {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -640px;
+    width: 640px;
+    max-width: 100vw;
+    z-index: 6000;
+    color: #ececec;
+    background-color: white;
+    box-shadow: rgb(38, 57, 77) 0px 20px 30px -10px;
+    transition: left 400ms ease-in-out;
+  }
+  [chooser][show] {
+    left: 0;
+  }
+  img {
+    width: 320px;
+  }
+</style>
+
+<br><br>
+
+<img id="test" src="https://starecat.com/content/wp-content/uploads/cat-why-is-this-empty-food-bowl-with-food-in-it.jpg"></img>
+
+<br><br>
+
+<div id="chooser" chooser></div>
+
+<div style="display: flex;">
+
+  <div>
+    <button onclick="choose('PhotosByDate', 'chooser', false, 12)">Choose Photo</button>
+  </div>
+
+  <div>
+    <button onclick="choose('PhotosByDate', 'chooser', true, 12)">Choose Photo (Filesystem, 12 photos max)</button>
+  </div>
+
+  <div style="flex: 1"></div>
+
+</div>
+
+<script type="module" src="./app.js"></script>
+
+</html>
