@@ -14,7 +14,7 @@ Today, fingerprintable use cases are addressed on an ad-hoc basis and those and 
 * private extensions/plugins to apps (e.g. VSCode, Discord, Chrome, etc.) that might no longer need install steps and can be automatically and safely loaded by all users in a collaborative environment.
 
  \
-The proposal outlines how untrusted components can access private user data through policy protection and enforcement. This is achieved through three mechanisms:
+The [proposal](https://github.com/project-oak/arcsjs-chromium/tree/main/doc/explainer) outlines how untrusted components can access private user data through policy protection and enforcement. This is achieved through three mechanisms:
 
 * A policy language that defines restrictions for data usage. For example, this could enforce integrity and confidentiality requirements. 
 * A secure execution environment that enforces the policy outlined above for untrusted components. A lightweight component specification provides for explicit control over data inputs and outputs allowing data flow analysis.
