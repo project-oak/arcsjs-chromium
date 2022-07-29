@@ -18,4 +18,4 @@ The proposal outlines how untrusted components can access private user data thro
 
 * A policy language that defines restrictions for data usage. For example, this could enforce integrity and confidentiality requirements. 
 * A secure execution environment that enforces the policy outlined above for untrusted components. A lightweight component specification provides for explicit control over data inputs and outputs allowing data flow analysis.
-* A trusted UI composition layer that allows for untrusted components to co-exist in a UI without interferring with each other.
+* A trusted UI composition layer that allows for untrusted components to co-exist in a UI without interfering with each other.
