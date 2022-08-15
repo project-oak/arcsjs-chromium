@@ -11,8 +11,8 @@ import {Paths} from '../env/arcsjs/core/utils.min.js';
 const here = Paths.getAbsoluteHereUrl(import.meta);
 
 const paths = {
-  $app: `${here}`,
   $arcs: `${here}/arcs.js`,
+  $app: `${here}`,
   $library: `${here}/../env/arcsjs/Library`,
   $local: `${here}/../demo/fonts/Library`
 };
