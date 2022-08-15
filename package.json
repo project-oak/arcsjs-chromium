@@ -7,7 +7,7 @@
   "description": "",
   "main": "server.js",
   "engines": {
-    "node": "12.x"
+    "node": ">=14.0.0"
   },
   "devDependencies": {
     "local-web-server": "^4.2.1"

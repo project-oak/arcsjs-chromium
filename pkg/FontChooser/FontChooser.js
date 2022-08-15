@@ -1,36 +1,45 @@
 /**
  * Copyright 2022 Google LLC
- * 
+ *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
+import {FontChooserApp} from '../FontChooser/FontChooserApp.js';
+import {Paths} from '../env/arcsjs/core/utils.min.js';
 
-// TODO(sjmiles): any relative path would be based on the document the Frame is in,
-// which could be completely unrelated to where this module is located.
-// Therefore we build an absolute path based on the location of this module.
-// Warning: this process will not survive bundling.
-const moduleRef = import.meta.url.split('/').slice(0, -1).join('/');
-const defaultFrameRef = `${moduleRef}/app/chooser.html`;
+const here = Paths.getAbsoluteHereUrl(import.meta);
 
-let frameRef;
-
-const {assign} = Object;
-const {body} = document;
-
-const create = (tag, opts) => assign(document.createElement(tag), opts);
+const paths = {
+  $app: `${here}`,
+  $arcs: `${here}/arcs.js`,
+  $library: `${here}/../env/arcsjs/Library`,
+  $local: `${here}/../demo/fonts/Library`
+};
 
 let privateFontData;
 
 export const FontChooser = {
-  async requestFont({webFonts, suggested, ...options}) {
-    frameRef = options.frameRef || defaultFrameRef;
-    if (!privateFontData) {
-      await init();
-      privateFontData = [...privateFontData, ...webFonts];
-    }
-    return new Promise(resolve => ux({...options, suggested}, resolve));
+  async requestFont({webFonts, suggested, container, ...options}) {
+   const privateFontData = await requirePrivateFontData();
+    const fontData = [...privateFontData, ...webFonts];
+    //
+    const app = new FontChooserApp(paths, container || document.body, {fontData});
+    await app.spinup();
+    //
+    return new Promise(resolve => {
+      app.onresult = font => {
+        resolve(font);
+      };
+    });
   }
+};
+
+const requirePrivateFontData = async () => {
+  if (!privateFontData) {
+    await init();
+  }
+  return privateFontData;
 };
 
 const init = async () => {
@@ -45,57 +54,9 @@ const init = async () => {
     privateFontData = queryFonts.map(({family, fullName, italic, postscriptName, stretch, style, weight}) => ({family, fullName, italic, postscriptName, stretch, style, weight}));
   } else {
     const startstamp = performance.now();
-    const {SAMPLE_FONTS} = await import('./app/LargeFontSet.js');
+    const {SAMPLE_FONTS} = await import('./smoke/LargeFontSet.js');
     privateFontData = SAMPLE_FONTS;
     const endstamp = performance.now();
     console.log(`Completed large driver local font set load [elapsed=${Math.floor(endstamp - startstamp)} ms].`);
   }
-};
-
-const ux = ({chooser, kind, suggested}, handler) => {
-  createFrame(chooser || createChooser(), kind, handler, suggested);
-};
-
-const createFrame = (root, kind, handler, suggested) => {
-  const iframeOpts = kind ? `?kind=${kind}` : '';
-  const iframe = create('iframe', {
-    src: `${frameRef}${iframeOpts}`,
-    style: 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-sizing: border-box; border: none; background: white;',
-    onload: () => onFrameLoaded(iframe, root, handler, suggested)
-  });
-  return root.appendChild(iframe);
-};
-
-const createChooser = () => {
-  return body.appendChild(create('div', {
-    style: 'position: fixed; inset: 0; background-color: transparent;'
-  }));
-};
-
-
-const onFrameLoaded = (iframe, root, handler, suggested) => {
-  // attach listener to `window` (aka `top`) that hears messages sent from 'iframe'
-  window.addEventListener('message', makeListener(iframe, root, handler, suggested));
-  setTimeout(() => root.setAttribute('show', ''), 300);
-  console.log('iframe loaded');
-};
-
-// attaches listener to `window` (aka `top`) that hears messages sent from 'iframe'
-const makeListener = (iframe, root, handler, suggested) => {
-  const listener = e => {
-    if (e.data === 'hello') {
-      iframe.contentWindow.postMessage({
-        fontData: privateFontData,
-        suggested: suggested
-      }, '*');
-    } else {
-      root.removeAttribute('show');
-      setTimeout(() => {
-        window.removeEventListener('message', listener);
-        iframe.remove();
-        handler(e.data?.font);
-      }, 300);
-    }
-  };
-  return listener;
 };

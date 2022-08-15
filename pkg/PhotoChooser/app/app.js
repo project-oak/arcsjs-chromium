@@ -6,13 +6,7 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-
-import {Runtime, Chef, Decorator, logFactory, pathForKind, importModules} from '../../arcs-import.js';
-const {Services, Params, Surfaces} = await importModules(async p => import(p), [
-  '$library/App/services.js',
-  '$library/App/params.js',
-  '$library/Dom/surfaces/xen/xen-surfaces.js'
-]);
+import {Paths, Runtime, Params, Chef, Decorator, /*Surfaces,*/ Services, logFactory, pathForKind} from '../../arcs.js';
 import {ExifService, EXIF_MSG} from './ExifService.js';
 
 // logger
@@ -61,7 +55,7 @@ Services.system.add(async (runtime, host, request) => {
 
 const bootSystem = async (system, recipe, photoData) => {
   // make system surface
-  system.surface = await Surfaces.create('system', root, surfacePath);
+  //system.surface = await Surfaces.create('system', root, surfacePath);
   // make an Arc on the Surface
   const arc = await system.bootstrapArc('system', null, system.surface, Services.system);
   // use as static recipe input
@@ -71,7 +65,7 @@ const bootSystem = async (system, recipe, photoData) => {
     getPrototypeOf(arc).storeChanged.call(arc, storeId, store);
     if (storeId === 'pickedPhoto') {
       console.warn('pickedPhoto', store.data);
-      const photo = photoData.find(r => r.photoUrl === store.data.photoUrl);
+      const photo = photoData.find(r => r.photoUrl === store.data);
       emitResult(photo);
     };
   };
