@@ -8,11 +8,8 @@
 
 const SuggestedFonts = {
   $kind: '$local/SuggestedFonts',
-  $bindings: {
-    fonts: '',
-    pickedFont: '',
-    suggested: 'suggested'
-  }
+  $inputs: ['fonts', 'suggested'],
+  $outputs: ['pickedFont']
 };
 
 export const FontsByFamilyRecipe = {

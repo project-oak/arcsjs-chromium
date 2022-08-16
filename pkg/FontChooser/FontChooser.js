@@ -5,8 +5,8 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-import {FontChooserApp} from '../FontChooser/FontChooserApp.js';
-import {Paths} from '../env/arcsjs/core/utils.min.js';
+import {Paths} from './allowlist.js';
+import {FontChooserApp} from './FontChooserApp.js';
 
 const here = Paths.getAbsoluteHereUrl(import.meta);
 
@@ -21,10 +21,10 @@ let privateFontData;
 
 export const FontChooser = {
   async requestFont({webFonts, suggested, container, ...options}) {
-   const privateFontData = await requirePrivateFontData();
+    const privateFontData = await requirePrivateFontData();
     const fontData = [...privateFontData, ...webFonts];
     //
-    const app = new FontChooserApp(paths, container || document.body, {fontData});
+    const app = new FontChooserApp(paths, container || document.body, {fontData, suggested});
     await app.spinup();
     //
     return new Promise(resolve => {

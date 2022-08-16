@@ -6,9 +6,15 @@
 * https://developers.google.com/open-source/licenses/bsd
 */
 globalThis.config = {
+  arcsjs: 'https://arcsjs.web.app/0.4',
+  // put a symlink in `env` to a local arcsjs `pkg` folder,
+  // and uncomment this to use that pkg
+  //arcsjs: '../env/arcsjs',
+
   // identifies the p2p meeting place, peers must be in this same aeon
   // also identifies offline storage node
   aeon: 'local-fonts/00x00',
+
   // each flag below set true enables logging for the named subsystem
   // TODO(wkorman): Understand and document each of below (and aeon).
   logFlags: {
@@ -16,6 +22,7 @@ globalThis.config = {
     host: true,
     decorator: true,
     particles: true,
-    surfaces: true
+    surfaces: true,
+    worker: true
   }
 };

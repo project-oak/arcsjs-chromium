@@ -9,7 +9,5 @@
 
 // configure
 import './config.js';
-
 // import arcs engine
-//import '../env/arcsjs/Library/App/Worker/ArcsWorker.js';
-import 'https://arcsjs.web.app/0.4/Library/App/Worker/ArcsWorker.js';
+await import(`${globalThis.config.arcsjs}/Library/App/Worker/ArcsWorker.js`);
