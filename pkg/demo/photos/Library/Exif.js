@@ -12,7 +12,7 @@
 
   async exifService(url, {service, exifCache}) {
     if (!url) { return {}; }
-    const exif = exifCache[url] ?? await service({msg: 'exif', url});
+    const exif = exifCache[url] ?? await service({kind: 'exif', url});
     exifCache[url] = exif;
     return exif;
   },
@@ -27,8 +27,8 @@
     };
   },
 
-  async update({url}, state) {
-    const exif = await this.exifService(url, state);
+  async update({hoverUrl}, state) {
+    const exif = await this.exifService(hoverUrl, state);
     assign(state, {exif});
   },
 

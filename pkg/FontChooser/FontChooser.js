@@ -7,39 +7,28 @@
  */
 import {Paths} from './allowlist.js';
 import {FontChooserApp} from './FontChooserApp.js';
+import {Chooser} from '../Chooser/Chooser.js';
 
 const here = Paths.getAbsoluteHereUrl(import.meta);
 
-const paths = {
-  $arcs: `${here}/arcs.js`,
-  $app: `${here}`,
-  $library: `${here}/../env/arcsjs/Library`,
-  $local: `${here}/../demo/fonts/Library`
-};
-
-let privateFontData;
-
-export const FontChooser = {
-  async requestFont({webFonts, suggested, container, ...options}) {
-    const privateFontData = await requirePrivateFontData();
-    const fontData = [...privateFontData, ...webFonts];
-    //
-    const app = new FontChooserApp(paths, container || document.body, {fontData, suggested});
-    await app.spinup();
-    //
-    return new Promise(resolve => {
-      app.onresult = font => {
-        resolve(font);
-      };
-    });
+export class FontChooser extends Chooser {
+  static async requestFont({webFonts, suggested, container, ...options}) {
+      return super.request({
+            container,
+            appData: webFonts,
+            obtainPrivateData: requirePrivateFontData,
+            suggested
+          }
+      )
+    }
+  static buildApp(paths, root, ...options) {
+    paths.$local = `${here}/../demo/fonts/Library`;
+    return new FontChooserApp(paths, root, options);
   }
 };
 
 const requirePrivateFontData = async () => {
-  if (!privateFontData) {
-    await init();
-  }
-  return privateFontData;
+  return await init();
 };
 
 const init = async () => {
@@ -51,11 +40,11 @@ const init = async () => {
     const queryFonts = await navigator.fonts.query({persistentAccess: true});
     const endstamp = performance.now();
     console.log(`Completed native local fonts query [elapsed=${Math.floor(endstamp - startstamp)} ms].`);
-    privateFontData = queryFonts.map(({family, fullName, italic, postscriptName, stretch, style, weight}) => ({family, fullName, italic, postscriptName, stretch, style, weight}));
+    return queryFonts.map(({family, fullName, italic, postscriptName, stretch, style, weight}) => ({family, fullName, italic, postscriptName, stretch, style, weight}));
   } else {
     const startstamp = performance.now();
     const {SAMPLE_FONTS} = await import('./smoke/LargeFontSet.js');
-    privateFontData = SAMPLE_FONTS;
+    return SAMPLE_FONTS;
     const endstamp = performance.now();
     console.log(`Completed large driver local font set load [elapsed=${Math.floor(endstamp - startstamp)} ms].`);
   }

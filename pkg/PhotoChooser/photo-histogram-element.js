@@ -7,8 +7,8 @@
  */
 
 import {Xen} from 'https://web-arcs.web.app/Library/Common/dom/xen/xen-async.js';
-import {PhotoHistogramUtil} from '../../third_party/photo-histogram/photo-histogram.js';
-import {css} from '../../third_party/photo-histogram/photo-histogram.css.js';
+import {PhotoHistogramUtil} from '../third_party/photo-histogram/photo-histogram.js';
+import {css} from '../third_party/photo-histogram/photo-histogram.css.js';
 
 const template = Xen.Template.html`
 <style>
