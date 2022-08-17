@@ -7,30 +7,22 @@
  */
 import './config.js';
 import {App/*, TensorFlowService*/} from './allowlist.js';
+import {ChooserApp} from '../Chooser/ChooserApp.js';
 
 import {FontsByFamilyRecipe} from '../demo/fonts/Library/FontsByFamilyRecipe.js';
 
-export const FontChooserApp = class extends App {
+export class FontChooserApp extends ChooserApp {
   constructor(paths, root, options) {
-    super(paths, root);
-    this.fontData = options?.fontData;
-    this.suggested = options?.suggested;
-    this.userAssembly = [FontsByFamilyRecipe];
-    //this.services = [TensorFlowService];
+    super(paths, root, 'pickedFont', FontsByFamilyRecipe, ...options);
   }
-  async spinup() {
-    await super.spinup();
-    // input startup data
-    this.arcs.setOpaqueData('fonts', this.fontData);
+
+  setupBindings() {
+    this.arcs.setOpaqueData('fonts', this.chooserData);
     this.arcs.set('user', 'fonts', 'fonts');
     this.arcs.set('user', 'suggested', this.suggested);
-    // look for data egress
-    this.arcs.watch('user', 'pickedFont', pickedFont => {
-      const font = this.fontData.find(r => r.fullName === pickedFont);
-      this.onresult(font);
-    });
   }
-  onresult(font) {
-    // client should override
+
+  findResult(data) {
+    return this.chooserData.find(r => r.fullName == data);
   }
 };

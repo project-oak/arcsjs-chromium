@@ -19,7 +19,7 @@
   }
 </style>
 <div flex rows>
-   <photo-histogram flex src="{{url}}"></photo-histogram>
+   <photo-histogram flex src="{{hoverUrl}}"></photo-histogram>
 </div>`;
   }
 })

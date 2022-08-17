@@ -20,5 +20,6 @@ window.choose = async (kind, container, fileSystem, maxPhotos) => {
   };
   const photo = await PhotoChooser.requestPhoto(args);
   console.warn('Chosen Photo:', photo);
+  window[container].removeAttribute('show');
   test.src = photo && photo.photoUrl;
 };
