@@ -1,14 +1,14 @@
 /**
  * Copyright 2022 Google LLC
- * 
+ *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
 
 import {Xen} from 'https://web-arcs.web.app/Library/Common/dom/xen/xen-async.js';
-import {PhotoHistogramUtil} from '../../third_party/photo-histogram/photo-histogram.js';
-import {css} from '../../third_party/photo-histogram/photo-histogram.css.js';
+import {PhotoHistogramUtil} from '../third_party/photo-histogram/photo-histogram.js';
+import {css} from '../third_party/photo-histogram/photo-histogram.css.js';
 
 const template = Xen.Template.html`
 <style>
@@ -41,7 +41,7 @@ class PhotoHistogramElement extends Xen.Async {
   }
 
   async update({src}, state) {
-    console.warn(src);
+    //console.warn(src);
 
     if (src) {
       const input = this._dom.root.getElementById('input');

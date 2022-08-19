@@ -5,14 +5,15 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-import {Paths} from './allowlist.js';
+import './conf/config.js';
+import {Paths} from './conf/allowlist.js';
 import {FontChooserApp} from './FontChooserApp.js';
 
 const here = Paths.getAbsoluteHereUrl(import.meta);
 
 const paths = {
-  $arcs: `${here}/arcs.js`,
   $app: `${here}`,
+  $config: `${here}/conf/config.js`,
   $library: `${here}/../env/arcsjs/Library`,
   $local: `${here}/../demo/fonts/Library`
 };
@@ -21,7 +22,7 @@ let privateFontData;
 
 export const FontChooser = {
   async requestFont({webFonts, suggested, container, ...options}) {
-    const privateFontData = await requirePrivateFontData();
+    const privateFontData = await requirePrivateData();
     const fontData = [...privateFontData, ...webFonts];
     //
     const app = new FontChooserApp(paths, container || document.body, {fontData, suggested});
@@ -35,7 +36,7 @@ export const FontChooser = {
   }
 };
 
-const requirePrivateFontData = async () => {
+const requirePrivateData = async () => {
   if (!privateFontData) {
     await init();
   }
@@ -54,7 +55,7 @@ const init = async () => {
     privateFontData = queryFonts.map(({family, fullName, italic, postscriptName, stretch, style, weight}) => ({family, fullName, italic, postscriptName, stretch, style, weight}));
   } else {
     const startstamp = performance.now();
-    const {SAMPLE_FONTS} = await import('./smoke/LargeFontSet.js');
+    const {SAMPLE_FONTS} = await import('./LargeFontSet.js');
     privateFontData = SAMPLE_FONTS;
     const endstamp = performance.now();
     console.log(`Completed large driver local font set load [elapsed=${Math.floor(endstamp - startstamp)} ms].`);

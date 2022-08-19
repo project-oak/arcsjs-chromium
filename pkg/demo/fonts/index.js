@@ -7,10 +7,10 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 
-// get application specific fonts
-import {fonts} from './CustomFontSet.js';
 // get FontChooer API
 import {FontChooser} from '../../FontChooser/FontChooser.js';
+// get application specific fonts
+import {fonts} from './CustomFontSet.js';
 
 // two FontChooser request examples
 const SimpleRequest = {

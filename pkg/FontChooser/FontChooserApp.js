@@ -1,12 +1,12 @@
 /**
+ * @license
  * Copyright 2022 Google LLC
  *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-import './config.js';
-import {App/*, TensorFlowService*/} from './allowlist.js';
+import {App, TensorFlowService} from './conf/allowlist.js';
 
 import {FontsByFamilyRecipe} from '../demo/fonts/Library/FontsByFamilyRecipe.js';
 
@@ -16,7 +16,7 @@ export const FontChooserApp = class extends App {
     this.fontData = options?.fontData;
     this.suggested = options?.suggested;
     this.userAssembly = [FontsByFamilyRecipe];
-    //this.services = [TensorFlowService];
+    this.services = {TensorFlowService};
   }
   async spinup() {
     await super.spinup();
