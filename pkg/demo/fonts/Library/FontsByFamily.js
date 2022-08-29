@@ -6,8 +6,8 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-/* globals decorator, filter html */
 ({
+
 render({fonts}) {
   return {
     families: {
@@ -36,7 +36,6 @@ onFontClick({eventlet: {key}}) {
 },
 
 template: html`
-
 <style>
   :host {
     display: block;
@@ -99,6 +98,5 @@ template: html`
     </expandable-item>
   </div>
 </template>
-
 `
-})
+});
