@@ -6,9 +6,9 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-const path = globalThis.config?.arcsjs || 'https://arcsjs.web.app/latest';
+const path = globalThis.config?.arcsjs || 'https://arcsjs.web.app/0.4.0';
 
-const core = `${path}/core`;
+const core = `${path}/Library/Core`;
 const lib = `${path}/Library`;
 
 export const {

@@ -6,7 +6,7 @@
 * https://developers.google.com/open-source/licenses/bsd
 */
 globalThis.config = {
-  arcsjs: 'https://arcsjs.web.app/0.4',
+  arcsjs: 'https://arcsjs.web.app/0.4.0',
   // requires a symlink in `env` to a local arcsjs `pkg` folder
   //arcsjs: '../../env/arcsjs',
   // identifies the p2p meeting place, peers must be in this same aeon

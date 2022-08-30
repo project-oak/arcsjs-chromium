@@ -50,7 +50,7 @@ request for the picker, and invokes it when desired. A picker request is
 initiated by invoking `FontChooser.requestFont(request)` with a JSON object
 containing the following key parameters:
 
-- **chooser**: The root DOM element to contain the IFRAME
+- **chooser**: The root DOM element to contain the picker dialog.
 - **webFonts**: Additional host-page (not local) supplied fonts.
 - **kind**: A reference to the **_Recipe_** file containing your custom picker
   code.
@@ -60,7 +60,7 @@ As an example
 ```
 const FamilyRequest = {
   // custom recipe
-  kind: `${local}/FontsByFamilyRecipe`,
+  kind: '$local/FontsByFamilyRecipe',
   // custom fonts
   webFonts: fonts,
   // custom container
@@ -70,8 +70,9 @@ const FamilyRequest = {
 FontChooser.requestFont(FamilyRequest);
 ```
 
-**Note**: The `${local}` variable is just a JS variable defined in the recipe
-file which we will explain in the next section.
+**Note**: The `$local` variable is a special substitution provided by the 
+runtime that refers to the `Library` directory in your app that contains the
+recipes and particles.
 
 <a href="https://github.com/project-oak/arcsjs-chromium/tree/main/pkg/demo/explainer/app.js" target="_demo">See app.js example</a>
 
@@ -580,14 +581,12 @@ for example:
 ```
 const BoldFonts = {
   $kind: '$local/3-FilterBold',
-  $bindings: {
-    fonts: 'fonts',
-    pickedFont: 'pickedFont'
-  }
+  $inputs: ['fonts'],
+  $outputs: ['pickedFont'],
 };
 
 main: {
-  $kind: `${local}/8-Slots`,
+  $kind: `$local/8-Slots`,
   $bindings: {
     fonts: 'fonts',
     pickedFont: 'pickedFont'

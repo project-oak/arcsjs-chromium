@@ -10,7 +10,7 @@ const Module = Quill.import('core/module');
 const Delta = Quill.import('delta');
 
 import {choosePhoto} from '../app.js';
-
+import {QuillPhotoPickerRecipe} from '../Library/QuillPhotoPickerRecipe.js';
 
 class PhotoChooser extends Module {
   constructor(quill, options) {
@@ -22,7 +22,11 @@ class PhotoChooser extends Module {
   }
 
   async photoChooser() {
-    const photo = await choosePhoto('PhotosByDate', 'chooser', true, 12);
+    const chooser = document.getElementById('chooser');
+    chooser.setAttribute('show', '');
+    const photo = await choosePhoto([QuillPhotoPickerRecipe], 'chooser', true, 12);
+    chooser.removeAttribute('show');
+
     const range = this.quill.getSelection(true);
     const delta = new Delta().retain(range.index).delete(range.length);
     delta.insert({image: photo.photoUrl}, {style: "transform: rotate(" + (photo?.privateData?.rotation || 0) + "deg)"});

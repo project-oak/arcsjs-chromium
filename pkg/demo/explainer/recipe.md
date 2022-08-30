@@ -21,15 +21,13 @@ It is easiest to start by explaining a particle.
 
 In a basic Particle, we simply include a string representing where to find the
 particle’s implementation as the `$kind`. We can also include any inputs as
-`$bindings`. In the code example below, the particle can be found in the
+`$inputs`. In the code example below, the particle can be found in the
 `particles/User` file and we have one input: the tenant store.
 
 ```
 const userDialogParticle = userDialogParticle: {
   $kind: 'particles/User',
-  $bindings: {
-    tenant: ''
-  }
+  $inputs: ['tenant'],
 };
 ```
 
@@ -45,9 +43,7 @@ const UserDialogRecipe = {
  // particle
  userDialogParticle: {
    $kind: 'particles/User',
-   $bindings: {
-     tenant: ''
-   }
+   $inputs: ['tenant'],
  }
 };
 ```
@@ -58,9 +54,7 @@ particle declared separately and then used within the recipe as shown below.
 ```
 const userDialogParticle = userDialogParticle: {
   $kind: 'particles/User',
-  $bindings: {
-    tenant: ''
-  }
+  $inputs: ['tenant'],
 };
 
 const UserDialogRecipe = {
@@ -76,9 +70,7 @@ systems by "slotting" a recipe into a particle using the `$slots` field:
 ```
 const mainRecipe = {
   $kind: 'particles/Builder',
-  $bindings: {
-    actions: '',
-  },
+  $inputs: ['tenant'],
   $slots: {
     // Slots contain recipes.
     userDialogRecipe
@@ -137,9 +129,7 @@ const UserDialogRecipe = {
  // particle
  userDialogParticle: {
    $kind: 'particles/User',
-   $bindings: {
-     tenant: ''
-   }
+   $inputs: ['tenant'],
  }
 };
 
@@ -150,18 +140,14 @@ const Home = {
  $stores: stores,
  main: {
    $kind: 'particles/Home',
-   $bindings: {
-     actions: ''
-   },
+   $inputs: ['actions'],
    $slots: {
      // slot
      selector: {
        // particle
        actionChooser: {
          $kind: 'particles/ActionChooser',
-         $bindings: {
-           switch: ''
-         }
+         $inputs: ['switch'],
        }
      }, // end selection Recipe
      // Here we use the UserDialogRecipe defined above

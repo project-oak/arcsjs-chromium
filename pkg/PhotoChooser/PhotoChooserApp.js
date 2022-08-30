@@ -15,7 +15,7 @@ export const PhotoChooserApp = class extends App {
     super(paths, root);
     this.photoData = options?.photoData;
     //this.suggested = options?.suggested;
-    this.userAssembly = [PhotosByDateRecipe];
+    this.userAssembly = options?.recipe || [PhotosByDateRecipe];
     this.services = {ExifService};
   }
   async spinup() {
@@ -26,7 +26,7 @@ export const PhotoChooserApp = class extends App {
     //this.arcs.set('user', 'suggested', this.suggested);
     // look for data egress
     this.arcs.watch('user', 'pickedPhoto', pickedPhoto => {
-      const photo = this.photoData.find(r => r.fullName === pickedPhoto);
+      const photo = this.photoData.find(r => r.photoUrl === pickedPhoto);
       this.onresult(photo);
     });
   }

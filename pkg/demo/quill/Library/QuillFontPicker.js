@@ -19,22 +19,22 @@
     return {
       styles: {
         models: fonts,
-        decorator
+        decorator: 'decorator'
       },
 
       friends: {
         models: fonts,
-        decorator,
+        decorator: 'decorator',
         suggested,
         filter: 'suggestedfilter',
       },
       families: {
         models: fonts,
-        decorator,
+        decorator: 'decorator',
         fonts: {
           collateBy: 'family'
         },
-        filter
+        filter: 'filter'
       }
     };
   },
@@ -68,11 +68,11 @@
   },
 
   onFontClick({eventlet: {key}}) {
-    return {pickedFont: {font: key, claims: ['user_action']}};
+    return {pickedFont: key};
   },
 
   onBadFontClick({eventlet: {key}}) {
-    return {pickedFont: {font: key}};
+    return {pickedFont: key};
   },
 
   onChange({eventlet: {value}}, state) {
@@ -142,7 +142,6 @@
   }
 </style>
 
-<div repeat="styles_t">{{styles}}</div>
 
 <div search><span>Search: </span><input type="text" on-change="onChange" value="{{searchFilter}}"></div>
 <div head>Suggested</div>
@@ -151,9 +150,6 @@
 <div head>All Fonts</div>
 <div scrolling fonts families list repeat="family_t">{{families}}</div>
 
-<template styles_t>
-  <div><style>{{fontFace}}</style></div>
-</template>
 
 <template font_t>
   <div font toolbar>

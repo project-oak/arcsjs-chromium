@@ -25,7 +25,7 @@ export const FontChooser = {
     const privateFontData = await requirePrivateData();
     const fontData = [...privateFontData, ...webFonts];
     //
-    const app = new FontChooserApp(paths, container || document.body, {fontData, suggested});
+    const app = new FontChooserApp(options?.paths || paths, container || document.body, {fontData, suggested, recipe: options.kind});
     await app.spinup();
     //
     return new Promise(resolve => {

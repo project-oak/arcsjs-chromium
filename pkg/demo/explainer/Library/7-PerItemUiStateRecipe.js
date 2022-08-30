@@ -8,7 +8,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const PerItemUIStateRecipe = {
   $meta: {
@@ -24,10 +23,8 @@ export const PerItemUIStateRecipe = {
     }
   },
   main: {
-    $kind: `${local}/7-PerItemUiState`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/7-PerItemUiState',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

@@ -8,14 +8,9 @@
  * http://polymer.github.io/PATENTS.txt
  */
 
-const PolicyRenderer = {
-  $kind: '$local/PolicyRenderer',
-};
-
 export const QuillFontPickerRecipe = {
   $meta: {
     description: 'Quill Font Picker',
-    $policy: '$local/policy.json'
   },
 
   $stores: {
@@ -28,23 +23,16 @@ export const QuillFontPickerRecipe = {
     },
     suggested: {
       $type: `[Key]`,
+    },
+    baz: {
+      $type: '[String]',
+      value: 10
     }
   },
 
   main: {
-    $kind: "$local/QuillFontPicker",
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont',
-      suggested: 'suggested'
-    }
+    $kind: "$local/../../quill/Library/QuillFontPicker",
+    $inputs: ['fonts', 'suggested'],
+    $outputs: ['pickedFont'],
   },
-  DevTools: {
-    $kind: "$local/DevTools.js",
-    $slots: {
-      policy: {
-        PolicyRenderer
-      }
-    }
-  }
-};
+ };

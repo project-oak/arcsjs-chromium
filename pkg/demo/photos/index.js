@@ -22,6 +22,8 @@ window.choose = async (kind, container, fileSystem, maxPhotos) => {
     maxPhotos
   };
   const photo = await PhotoChooser.requestPhoto(args);
+  container.removeAttribute('show');
+
   console.warn('Chosen Photo:', photo);
   window.test.src = photo && photo.photoUrl;
 };

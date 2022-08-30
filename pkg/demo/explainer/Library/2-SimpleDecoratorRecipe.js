@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const SimpleDecoratorRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const SimpleDecoratorRecipe = {
     }
   },
   main: {
-    $kind: `${local}/2-SimpleDecorator`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/2-SimpleDecorator',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

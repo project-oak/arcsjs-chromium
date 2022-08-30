@@ -1,5 +1,18 @@
 import {FontChooser} from 'https://project-oak.github.io/arcsjs-chromium/FontChooser/FontChooser.js';
+import {Paths} from 'https://project-oak.github.io/arcsjs-chromium/FontChooser/conf/allowlist.js';
+
 import {fonts} from './CustomFontSet.js';
+// import {Paths} from '../../FontChooser/conf/allowlist.js';
+// import {FontChooser} from '../../FontChooser/FontChooser.js';
+
+const here = Paths.getAbsoluteHereUrl(import.meta);
+
+const paths = {
+  $app: `${here}`,
+  $config: `${here}/../../FontChooser/conf/config.js`,
+  $library: `${here}/../../env/arcsjs/Library`,
+  $local: `${here}/../explainer/Library`
+};
 
 // we need an absolute url to the location of the local library
 let local = `${window.location.href}`;
@@ -17,29 +30,29 @@ const buttonsOn = trueToEnable => [b0, e1, e2, e3, e4, e5, e6, e7, e8, e9].forEa
 
 const SampleRequest = {
   // custom recipe
-  kind: `${local}/LocalFontsRecipe`,
+  kind: "$local/LocalFontsRecipe",
   // custom fonts
   webFonts: fonts,
   // custom container
-  chooser: window.chooser
+  container: window.chooser
 };
 
 const SimpleRequest = {
   // custom recipe
-  kind: `${local}/LocalFontsRecipe`,
+  kind: "$local/LocalFontsRecipe",
   // custom fonts
   webFonts: fonts,
   // custom container
-  chooser: window.menu
+  container: window.menu
 };
 
 const FamilyRequest = {
   // custom recipe
-  kind: `${local}/FullDemo`,
+  kind: "$local/FullDemo",
   // custom fonts
   webFonts: fonts,
   // custom container
-  chooser: window.chooser
+  container: window.chooser
 };
 
 // ui
@@ -53,13 +66,19 @@ window.onFontsPanel = async () => {
 };
 
 window.onSamplePanel = async (recipe) => {
-  SampleRequest.kind = `${local}/${recipe}Recipe`;
+  SampleRequest.kind = `$local/${recipe}Recipe`;
   console.log(SampleRequest.kind);
   doit(SampleRequest);
 };
 
 const doit = async request => {
-  setFont(await requestFont(request));
+  const resolvedRequest = {...request};
+  const recipeModule = await import(request.kind + ".js")
+  resolvedRequest.kind = [Object.values(recipeModule).pop()];
+  resolvedRequest.paths = paths;
+  resolvedRequest.container.setAttribute('show', '');
+  setFont(await requestFont(resolvedRequest));
+  resolvedRequest.container.removeAttribute('show');
 };
 
 const requestFont = async request => {

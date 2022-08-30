@@ -11,18 +11,19 @@
 import {FontChooser} from '../../FontChooser/FontChooser.js';
 // get application specific fonts
 import {fonts} from './CustomFontSet.js';
-
+import {FontsByFamilyRecipe} from './Library/FontsByFamilyRecipe.js';
+import {LocalFontsRecipe} from './Library/LocalFontsRecipe.js';
 // two FontChooser request examples
 const SimpleRequest = {
   // custom recipe
-  kind: `./library/LocalFontsRecipe`,
+  kind: LocalFontsRecipe,
   // custom fonts
   webFonts: fonts
 };
 
 const FamilyRequest = {
   // custom recipe
-  kind: `./Library/FontsByFamilyRecipe`,
+  kind: FontsByFamilyRecipe,
   // custom fonts
   webFonts: fonts,
   // custom values

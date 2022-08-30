@@ -23,10 +23,8 @@ export const QuillPhotoPickerRecipe = {
   },
 
   main: {
-    $kind: "$local/QuillPhotoPicker",
-    $bindings: {
-      photos: 'photos',
-      pickedPhoto: 'pickedPhoto',
-    },
+    $kind: "$local/../../quill/Library/QuillPhotoPicker",
+    $inputs: ['photos'],
+    $outputs: ['pickedPhoto'],
   }
 };

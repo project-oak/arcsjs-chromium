@@ -7,17 +7,27 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 import {App, TensorFlowService} from './conf/allowlist.js';
-
 import {FontsByFamilyRecipe} from '../demo/fonts/Library/FontsByFamilyRecipe.js';
+
+function requireArray(arg) {
+  if (Array.isArray(arg)) {
+    return arg;
+  }
+  if (arg) {
+    return [arg];
+  }
+  return arg;
+}
 
 export const FontChooserApp = class extends App {
   constructor(paths, root, options) {
     super(paths, root);
     this.fontData = options?.fontData;
     this.suggested = options?.suggested;
-    this.userAssembly = [FontsByFamilyRecipe];
+    this.userAssembly = requireArray(options?.recipe) || [FontsByFamilyRecipe];
     this.services = {TensorFlowService};
   }
+
   async spinup() {
     await super.spinup();
     // input startup data

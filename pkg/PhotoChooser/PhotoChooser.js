@@ -41,7 +41,7 @@ export const PhotoChooser = {
     const privatePhotoData = await requirePrivateData(fileSystem);
     const photoData = [...privatePhotoData];
     //
-    const app = new PhotoChooserApp(paths, container || document.body, {photoData});
+    const app = new PhotoChooserApp(paths, container || document.body, {photoData, recipe: options.kind});
     await app.spinup();
     //
     return new Promise(resolve => {

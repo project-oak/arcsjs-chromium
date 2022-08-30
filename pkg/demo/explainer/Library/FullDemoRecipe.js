@@ -28,9 +28,7 @@ export const FontsByFamilyRecipe = {
 
   main: {
     $kind: "$local/FullDemo",
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

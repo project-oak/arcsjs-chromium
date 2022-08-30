@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const NoOpDecoratorRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const NoOpDecoratorRecipe = {
     }
   },
   main: {
-    $kind: `${local}/1-NoOpDecorator`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/1-NoOpDecorator',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };
