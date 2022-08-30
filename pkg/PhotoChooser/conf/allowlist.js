@@ -8,7 +8,7 @@
  */
  const path = globalThis.config?.arcsjs || 'https://arcsjs.web.app/latest';
 
- const core = `${path}/core`;
+ const core = `${path}/Library/Core`;
  const lib = `${path}/Library`;
 
  export const {
