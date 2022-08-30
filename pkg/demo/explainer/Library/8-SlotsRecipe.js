@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 const BoldFonts = {
   $kind: '$local/3-FilterBold',
@@ -31,11 +30,9 @@ export const SlotsRecipe = {
     }
   },
   main: {
-    $kind: `${local}/8-Slots`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    },
+    $kind: '$local/8-Slots',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont'],
     $slots: {
       boldfonts: {
         BoldFonts

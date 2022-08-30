@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const CollationRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const CollationRecipe = {
     }
   },
   main: {
-    $kind: `${local}/5-Collation`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/5-Collation',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

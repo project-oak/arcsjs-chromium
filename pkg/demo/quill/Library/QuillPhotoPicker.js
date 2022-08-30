@@ -46,7 +46,7 @@
   },
 
   onPhotoClick({eventlet: {key}}) {
-    return {pickedPhoto: {photoUrl: key}};
+    return {pickedPhoto:  key};
   },
 
   onChange({eventlet: {value}}, state) {

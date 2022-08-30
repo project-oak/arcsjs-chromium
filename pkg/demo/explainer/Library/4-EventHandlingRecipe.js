@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const EventHandlingRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const EventHandlingRecipe = {
     }
   },
   main: {
-    $kind: `${local}/4-EventHandling`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/4-EventHandling',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

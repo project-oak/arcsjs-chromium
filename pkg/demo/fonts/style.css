@@ -32,8 +32,8 @@ hr {
   left: -500px;
   width: 320px;
   max-width: 100vw;
-  z-index: 6000;
-  color: #ececec;
+  z-index: 9999;
+  /* color: #ececec; */
   background-color: white;
   box-shadow: rgb(38, 57, 77) 0px 20px 30px -10px;
   transition: left 400ms ease-in-out;
@@ -55,6 +55,7 @@ hr {
   margin-top: -2px;
   overflow: hidden;
 }
+
 [menu][show] {
   opacity: 1;
 }

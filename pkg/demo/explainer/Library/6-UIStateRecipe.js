@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const UIStateRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const UIStateRecipe = {
     }
   },
   main: {
-    $kind: `${local}/6-UIState`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/6-UIState',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

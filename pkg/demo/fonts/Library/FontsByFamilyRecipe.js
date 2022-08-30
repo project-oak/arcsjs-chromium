@@ -1,6 +1,6 @@
 /**
  * Copyright 2022 Google LLC
- * 
+ *
  * Use of this source code is governed by a BSD-style
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
@@ -8,12 +8,9 @@
 
 const SuggestedFonts = {
   $kind: '$local/SuggestedFonts',
-  $bindings: {
-    fonts: '',
-    pickedFont: '',
-    suggested: 'suggested'
-  }
-}
+  $inputs: ['fonts', 'suggested'],
+  $outputs: ['pickedFont']
+};
 
 export const FontsByFamilyRecipe = {
   $meta: {
@@ -21,10 +18,6 @@ export const FontsByFamilyRecipe = {
   },
   $stores: {
     fonts: {
-      $type: '[FontKey]',
-      $tags: ['simple']
-    },
-    families: {
       $type: '[FontKey]',
       $tags: ['simple']
     },
@@ -37,15 +30,12 @@ export const FontsByFamilyRecipe = {
   },
   main: {
     $kind: '$local/FontsByFamily',
-    $bindings: {
-      fonts: '',
-      families: '',
-      pickedFont: '',
-    },
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont'],
     $slots: {
       suggested: {
         SuggestedFonts
-      },
+      }
     }
   }
 };

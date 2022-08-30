@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const FilterBoldRecipe = {
   $meta: {
@@ -23,10 +22,8 @@ export const FilterBoldRecipe = {
     }
   },
   main: {
-    $kind: `${local}/3-FilterBold`,
-    $bindings: {
-      fonts: 'fonts',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/3-FilterBold',
+    $inputs: ['fonts'],
+    $outputs: ['pickedFont']
   }
 };

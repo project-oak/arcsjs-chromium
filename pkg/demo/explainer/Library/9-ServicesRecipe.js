@@ -7,7 +7,6 @@
  * subject to an additional IP rights grant found at
  * http://polymer.github.io/PATENTS.txt
  */
-const local = `/arcsjs-chromium/demo/explainer/Library`;
 
 export const ServicesRecipe = {
   $meta: {
@@ -27,11 +26,8 @@ export const ServicesRecipe = {
     }
   },
   main: {
-    $kind: `${local}/9-Services`,
-    $bindings: {
-      fonts: 'fonts',
-      families: 'families',
-      pickedFont: 'pickedFont'
-    }
+    $kind: '$local/9-Services',
+    $inputs: ['fonts', 'families'],
+    $outputs: ['pickedFont'],
   }
 };

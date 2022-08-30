@@ -13,6 +13,7 @@ const ColorPicker = Quill.import("ui/color-picker");
 const FontClass = Quill.import("attributors/class/font");
 const FontStyle = Quill.import("attributors/style/font");
 import {chooseFont} from '../app.js';
+import {QuillFontPickerRecipe} from '../Library/QuillFontPickerRecipe.js';
 
 const ALIGNS = [false, 'center', 'right', 'justify'];
 
@@ -71,7 +72,7 @@ class ArcsPicker extends Picker {
 
   togglePicker() {
     this.chooser.setAttribute("show", "true");
-    chooseFont('QuillFontPicker', this.chooser).then(font => {
+    chooseFont([QuillFontPickerRecipe], this.chooser).then(font => {
       this.chooser.removeAttribute("show");
       // We shove the chosen font into <option> in slot 0
       let option = this.select.getElementsByTagName("option")[0];

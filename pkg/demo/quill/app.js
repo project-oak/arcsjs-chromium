@@ -21,8 +21,8 @@ const localFont = `${import.meta.url.split('/').slice(0, -1).join(
 
 window.choosePhoto = async (kind, container, fileSystem, maxPhotos) => {
   const args = {
-    kind: `${localComplexPhoto}/${kind}Recipe.js`,
-    chooser: window[container],
+    kind,
+    container: window[container],
     fileSystem,
     maxPhotos
   };
@@ -34,8 +34,8 @@ window.choosePhoto = async (kind, container, fileSystem, maxPhotos) => {
 
 window.chooseFont = async (kind, container) => {
   const args = {
-    kind: `${localFont}/${kind}Recipe.js`,
-    chooser: container,
+    kind,
+    container: container,
     webFonts: fonts,
     suggested: [
       'Arial',
