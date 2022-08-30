@@ -14,7 +14,7 @@ const here = Paths.getAbsoluteHereUrl(import.meta);
 const paths = {
   $app: `${here}`,
   $config: `${here}/conf/config.js`,
-  $library: `${here}/../env/arcsjs/Library`,
+  $library: `${globalThis.config.arcsjs}/Library`,
   $local: `${here}/../demo/fonts/Library`
 };
 
