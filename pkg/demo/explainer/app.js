@@ -14,6 +14,8 @@ const paths = {
   $local: `${here}/../explainer/Library`
 };
 
+Paths.add(paths);
+
 // we need an absolute url to the location of the local library
 let local = `${window.location.href}`;
 if (local.endsWith('.html')) {
@@ -73,7 +75,7 @@ window.onSamplePanel = async (recipe) => {
 
 const doit = async request => {
   const resolvedRequest = {...request};
-  const recipeModule = await import("./Library/" + request.kind + ".js"));
+  const recipeModule = await import(Paths.resolve(request.kind + ".js"));
   resolvedRequest.kind = [Object.values(recipeModule).pop()];
   resolvedRequest.paths = paths;
   resolvedRequest.container.setAttribute('show', '');
