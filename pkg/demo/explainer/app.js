@@ -11,7 +11,7 @@ const paths = {
   $app: `${here}`,
   $config: `${here}/../../FontChooser/conf/config.js`,
   $library: `${globalThis.config.arcsjs}/Library`,
-  $local: `${here}/../explainer/Library`
+  $local: `${here}/Library`
 };
 
 Paths.add(paths);
