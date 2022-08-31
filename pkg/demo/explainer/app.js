@@ -9,7 +9,7 @@ const here = Paths.getAbsoluteHereUrl(import.meta);
 
 const paths = {
   $app: `${here}`,
-  $config: `${here}/../../FontChooser/conf/config.js`,
+  $config: 'https://project-oak.github.io/arcsjs-chromium/FontChooser/conf/config.js',
   $library: `${globalThis.config.arcsjs}/Library`,
   $local: `${here}/Library`
 };
