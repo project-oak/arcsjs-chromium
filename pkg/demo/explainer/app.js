@@ -73,7 +73,7 @@ window.onSamplePanel = async (recipe) => {
 
 const doit = async request => {
   const resolvedRequest = {...request};
-  const recipeModule = await import(request.kind + ".js")
+  const recipeModule = await import(Paths.resolve(request.kind + ".js"));
   resolvedRequest.kind = [Object.values(recipeModule).pop()];
   resolvedRequest.paths = paths;
   resolvedRequest.container.setAttribute('show', '');
