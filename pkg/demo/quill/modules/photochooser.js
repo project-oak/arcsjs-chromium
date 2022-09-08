@@ -11,6 +11,7 @@ const Delta = Quill.import('delta');
 
 import {choosePhoto} from '../app.js';
 import {QuillPhotoPickerRecipe} from '../Library/QuillPhotoPickerRecipe.js';
+import {PhotosByDateRecipe} from '../../photos/Library/PhotosByDateRecipe.js';
 
 class PhotoChooser extends Module {
   constructor(quill, options) {
@@ -24,7 +25,7 @@ class PhotoChooser extends Module {
   async photoChooser() {
     const chooser = document.getElementById('chooser');
     chooser.setAttribute('show', '');
-    const photo = await choosePhoto([QuillPhotoPickerRecipe], 'chooser', true, 12);
+    const photo = await choosePhoto([PhotosByDateRecipe], 'chooser', true, 12);
     chooser.removeAttribute('show');
 
     const range = this.quill.getSelection(true);
