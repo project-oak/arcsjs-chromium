@@ -25,7 +25,7 @@ class PhotoChooser extends Module {
   async photoChooser() {
     const chooser = document.getElementById('chooser');
     chooser.setAttribute('show', '');
-    const photo = await choosePhoto([PhotosByDateRecipe], 'chooser', true, 12);
+    const photo = await choosePhoto([QuillPhotoPickerRecipe], 'chooser', true, 12);
     chooser.removeAttribute('show');
 
     const range = this.quill.getSelection(true);
