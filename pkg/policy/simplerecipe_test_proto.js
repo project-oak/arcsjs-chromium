@@ -1,3 +1,11 @@
+/**
+ * @license
+ * Copyright 2022 Google LLC
+ *
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file or at
+ * https://developers.google.com/open-source/licenses/bsd
+ */
 /*
  %0 = arcsjs.create_store [name: "SimpleRecipe.public_texts", type: "[Text]"]()
     %1 = arcsjs.create_store [name: "SimpleRecipe.ignored_data", type: "[Text]"]()

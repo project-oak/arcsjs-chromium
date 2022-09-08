@@ -22,6 +22,10 @@ class Attribute {
       }
     }
   }
+
+  ir() {
+    return `${this.name}: "${this.value}"`;
+  }
 }
 
 class Input {
@@ -37,6 +41,10 @@ class Input {
       }
     }
   }
+
+  ir() {
+    return `%${this.id}`;
+  }
 }
 
 class Operation {
@@ -46,6 +54,10 @@ class Operation {
     this.inputs = inputs;
     this.attributes = attributes;
     generator.addUsedOp(name);
+  }
+
+  ir() {
+    return `%${this.id} = ${this.name}[${this.attributes.map(x => x.ir()).join(',')}](${this.inputs.map(i => i.ir()).join(',')})`;
   }
 
   json() {
@@ -115,6 +127,10 @@ class Binding {
     return this.store.isPublicStore();
   }
 
+  ir() {
+    return this.op.ir();
+  }
+
   json() {
     return this.op.json();
   }
@@ -122,7 +138,7 @@ class Binding {
 
 function mapBindings(generator, bindings, stores, isOutput) {
   return bindings
-      .flatMap(x => typeof x === 'string' ? {[x]: x} : Object.entries(x))
+      .flatMap(x => typeof x === 'string' ? [[x, x]] : Object.entries(x))
       // ignore bindings that don't match a store
       // TODO: should omit warning?
       .filter(([bindingName, storeName]) => stores.has(storeName))
@@ -187,7 +203,7 @@ export class PolicyGenerator {
     this.usedOps.add(name);
   }
 
-  recipeToPolicy() {
+  computeOperations(output) {
     // Construct all create_store operations first
     const stores = Object.entries(this.recipe.$stores).map(
         ([storeName, storeConfig]) => new Store(this, storeName, storeConfig));
@@ -209,7 +225,24 @@ export class PolicyGenerator {
     const allOutputOps = particles.flatMap(particle => particle.output);
 
     const allOps = allReferencedStores.concat(allPublicOps).concat(
-        particles).concat(allOutputOps).map(op => op.json());
+        particles).concat(allOutputOps).map(op => output(op));
+
+    return allOps;
+  }
+
+  recipeToIr() {
+    const allOps = this.computeOperations(op => op.ir());
+    return `
+module m0 {
+  block b0 {
+    ${allOps.join('\n    ')}
+  }
+}
+    `;
+  }
+
+  recipeToPolicy() {
+    const allOps = this.computeOperations(op => op.json());
 
     return {
       "topLevelModule": {

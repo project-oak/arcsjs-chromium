@@ -6,7 +6,8 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
-import {App, TensorFlowService} from './conf/allowlist.js';
+import {TensorFlowService} from '../Chooser/conf/allowlist.js';
+import {ChooserApp} from '../Chooser/ChooserApp.js';
 import {FontsByFamilyRecipe} from '../demo/fonts/Library/FontsByFamilyRecipe.js';
 
 function requireArray(arg) {
@@ -19,7 +20,7 @@ function requireArray(arg) {
   return arg;
 }
 
-export const FontChooserApp = class extends App {
+export const FontChooserApp = class extends ChooserApp {
   constructor(paths, root, options) {
     super(paths, root);
     this.fontData = options?.fontData;
