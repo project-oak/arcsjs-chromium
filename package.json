@@ -1,7 +1,6 @@
 {
   "name": "chromium-arcsjs",
   "author": "cromwellian@google.com",
-  "type": "module",
   "license": "ISC",
   "version": "0.0.0",
   "description": "",
