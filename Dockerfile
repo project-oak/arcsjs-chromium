@@ -51,8 +51,8 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt-get install -y nodejs
 
 RUN git clone https://github.com/google-research/raksha.git
+COPY .bazelrc-docker raksha/.bazelrc
 WORKDIR /usr/src/app/raksha
-COPY ../.bazelrc-docker ./.bazelrc
 RUN bazelisk build //src/...
 
 WORKDIR /usr/src/app
