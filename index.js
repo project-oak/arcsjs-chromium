@@ -3,11 +3,6 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import tmp from "tmp";
 import { exec } from "child_process";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 
@@ -15,7 +10,7 @@ app.use(express.static("pkg"));
 app.use(bodyParser.text({ type: 'text/plain' }));
 
 app.get("/", function (req, res) {
-  res.sendFile(__dirname + "/pkg/demo/quill/index.html");
+  res.redirect("/demo/quill/index.html");
 });
 
 const RAKSHA_BINARY = '/usr/src/app/raksha/bazel-bin/src/backends/policy_engine/souffle/check_policy_compliance';
