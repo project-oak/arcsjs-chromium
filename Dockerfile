@@ -14,6 +14,8 @@ COPY package*.json ./
 # Bundle app source
 COPY . .
 
+npm install
+
 EXPOSE 3000
 CMD [ "node", "index.js" ]
 #CMD [ "bash" ]
