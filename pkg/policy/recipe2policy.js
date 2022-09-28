@@ -57,7 +57,8 @@ class Operation {
   }
 
   ir() {
-    return `%${this.id} = ${this.name}[${this.attributes.map(x => x.ir()).join(',')}](${this.inputs.map(i => i.ir()).join(',')})`;
+    return `%${this.id} = ${this.name}[${this.attributes.map(x => x.ir()).join(
+        ', ')}](${this.inputs.map(i => i.ir()).join(', ')})`;
   }
 
   json() {
@@ -81,7 +82,7 @@ class Store extends Operation {
   constructor(generator, storeName, $store) {
     super(generator, 'arcsjs.create_store', [], [
       new Attribute("name", STRING, `${generator.recipeName}.${storeName}`),
-      new Attribute("type", STRING, $store.$type)
+      new Attribute("type", STRING, $store.$type.replace('[', 'List_').replace(']', ''))
     ]);
     this.generator = generator;
     this.storeName = storeName;
@@ -90,6 +91,10 @@ class Store extends Operation {
 
   isPublicStore() {
     return this.$store.$tags && this.$store.$tags.includes('public');
+  }
+
+  isPrivateStore() {
+    return this.$store.$tags && this.$store.$tags.includes('private');
   }
 }
 
@@ -102,11 +107,39 @@ class PublicOp extends Operation {
   }
 }
 
-class OutputOp extends Operation {
+class PrivateOp extends Operation {
+  constructor(generator, inputId) {
+    super(generator, 'sql.tag_transform', [new Input(inputId)], [
+          new Attribute('rule_name', STRING, "set_private")
+        ]
+    );
+  }
+}
+
+class SelectFieldOp extends Operation {
   constructor(generator, handleName, inputId) {
-    super(generator, 'sql.sql_output', [new Input(inputId)],
+    super(generator, 'arcsjs.select_field', [new Input(inputId)],
         [
-          new Attribute('handle_name', STRING, handleName)
+          new Attribute('name', STRING, handleName)
+        ]);
+  }
+}
+
+class OutputOp extends Operation {
+  constructor(generator, handleName, inputIds) {
+    super(generator, 'arcsjs.arcsjs_output',
+        inputIds.map(inputId => new Input(inputId)),
+        [
+        ]);
+  }
+}
+
+class UserAction extends Operation {
+  constructor(generator, from, to, inputIds) {
+    super(generator, "arcsjs.user_consent_to_downgrade",
+        inputIds.map(inputId => new Input(inputId)), [
+          new Attribute("downgrade_from", STRING, from),
+          new Attribute("downgrade_to", STRING, to)
         ]);
   }
 }
@@ -115,7 +148,8 @@ class Binding {
   constructor(generator, bindingName, store, isOutput) {
     this.bindingName = bindingName;
     this.store = store;
-    this.op = this.isPublic() ? new PublicOp(generator, store.id) : store;
+    this.op = this.isPublic() ? store
+        : this.isPrivate() ? new PrivateOp(generator, store.id) : store;
     this.isOutput = isOutput;
   }
 
@@ -125,6 +159,10 @@ class Binding {
 
   isPublic() {
     return this.store.isPublicStore();
+  }
+
+  isPrivate() {
+    return this.store.isPrivateStore();
   }
 
   ir() {
@@ -154,7 +192,7 @@ class Particle extends Operation {
 
     const inputBindings = [...bindingMap.values()].filter(x => !x.isOutput);
     const inputs = inputBindings.map(binding => new Input(binding.id));
-    const inputAttributes =  inputBindings.map(
+    const inputAttributes = inputBindings.map(
         (binding, index) => new Attribute("input_" + index, STRING,
             binding.bindingName));
 
@@ -168,7 +206,16 @@ class Particle extends Operation {
     this.storeMap = stores;
     this.bindingMap = bindingMap;
     this.output = this.outputBindings().map(
-        binding => new OutputOp(generator, binding.bindingName, this.id));
+        binding => new SelectFieldOp(generator, binding.bindingName, this.id));
+    this.downgrades = Object.entries($particle.$events || {}).map(
+        ([eventName, downgradeConfig]) => new UserAction(generator,
+            downgradeConfig[0], downgradeConfig[1],
+            // hack for demo
+            [this.output[0].id, (this.output.length > 1 ? this.output[1] : this.output[0]).id]));
+  }
+
+  hasDowngrades() {
+    return this.downgrades.length > 0;
   }
 
   bindings() {
@@ -179,13 +226,18 @@ class Particle extends Operation {
     return this.bindings().filter(binding => binding.isPublic());
   }
 
-  nonPublicBindings() {
-    return this.bindings().filter(binding => !binding.isPublic());
+  privateBindings() {
+    return this.bindings().filter(binding => binding.isPrivate());
   }
 
   outputBindings() {
     return this.bindings().filter(binding => binding.isOutput);
   }
+
+  downgradeOps() {
+    return this.downgrades;
+  }
+
 }
 
 export class PolicyGenerator {
@@ -222,10 +274,20 @@ export class PolicyGenerator {
     // Collect all-public bindings which need set_public tag
     const allPublicOps = particles.flatMap(
         particle => particle.publicBindings()).map(binding => binding.op);
-    const allOutputOps = particles.flatMap(particle => particle.output);
+    const allPrivateOps = particles.flatMap(
+        particle => particle.privateBindings()).map(binding => binding.op);
 
-    const allOps = allReferencedStores.concat(allPublicOps).concat(
-        particles).concat(allOutputOps).map(op => output(op));
+    const allSelectFieldOps = particles.flatMap(particle => particle.output);
+
+    const downgradeOps = particles.flatMap(particle => particle.downgradeOps());
+    const outputOp = new OutputOp(this, "out",
+        downgradeOps.map(op => op.id).concat(
+            particles.filter(particle => !particle.hasDowngrades()).flatMap(
+                p => p.output).map(p => p.id)));
+
+    const allOps = allReferencedStores.concat(allPrivateOps).concat(
+        particles).concat(allSelectFieldOps).concat(downgradeOps).concat(
+        outputOp).map(op => output(op));
 
     return allOps;
   }

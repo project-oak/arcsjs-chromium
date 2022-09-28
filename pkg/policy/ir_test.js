@@ -13,5 +13,6 @@ import {SimpleRecipe} from './simple_recipe.js';
 
 const policyGen = new PolicyGenerator(SimpleRecipe, "SimpleRecipe");
 const ir = policyGen.recipeToIr();
+console.log(ir);
 console.assert(ir.trim() == SimpleRecipeIr.trim(),
     "IR don't match");

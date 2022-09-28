@@ -15,7 +15,12 @@
     });
   },
 
-  render({fonts, suggested}) {
+  async update({show}, state, {service}) {
+    const policy = await service({msg: 'currentPolicyIr'});
+    assign(state, {policy});
+  },
+
+  render({fonts, suggested}, {policy}) {
     return {
       styles: {
         models: fonts,
@@ -26,6 +31,7 @@
         models: fonts,
         decorator: 'decorator',
         suggested,
+        policy,
         filter: 'suggestedfilter',
       },
       families: {
@@ -34,6 +40,7 @@
         fonts: {
           collateBy: 'family'
         },
+        policy,
         filter: 'filter'
       }
     };
@@ -47,7 +54,7 @@
     return suggested?.indexOf(name) != -1 && name?.toLowerCase().includes(myFilter?.toLowerCase());
   },
 
-  decorator({family, fullName, weight, style, postscriptName}, {suggested}, {searchFilter}) {
+  decorator({family, fullName, weight, style, postscriptName}, {suggested}, {searchFilter, policy}) {
     const fweight = style.includes('Bold') ? 'bold' : weight;
     const fstyle = style.includes('Italic') ? 'italic' : style.includes('Oblique') ? 'oblique' : '';
     const fontFace =  `@font-face {
@@ -63,12 +70,15 @@
       suggested,
       postscriptName,
       fontFace,
-      displayStyle: `font-family: "${family}"; font-weight: ${fweight}; font-style: ${fstyle};`
+      displayStyle: `font-family: "${family}"; font-weight: ${fweight}; font-style: ${fstyle};`,
+      valid: policy?.valid || false
     };
   },
 
-  onFontClick({eventlet: {key}}) {
-    return {pickedFont: key};
+  onFontClick({eventlet: {key, value}}) {
+    if (value) {
+      return {pickedFont: key};
+    }
   },
 
   onBadFontClick({eventlet: {key}}) {
@@ -153,7 +163,7 @@
 
 <template font_t>
   <div font toolbar>
-    <span flex name xen:style="{{displayStyle}}" on-click="onFontClick" key="{{key}}">{{fullName}}</span>
+    <span flex name xen:style="{{displayStyle}}" on-click="onFontClick" key="{{key}}" value="{{valid}}">{{fullName}}</span>
     <span sample xen:style="{{displayStyle}}" on-click="onBadFontClick" key="{{key}}">Sample</span>
   </div>
 </template>
