@@ -13,7 +13,7 @@ app.get("/", function (req, res) {
   res.redirect("/demo/quill/index.html");
 });
 
-const RAKSHA_BINARY = '/usr/src/app/raksha/bazel-bin/src/backends/policy_engine/souffle/check_policy_compliance';
+const RAKSHA_BINARY = '/usr/src/app/raksha/check_policy_compliance';
 const RAKSHA_POLICY = '/usr/src/app/raksha/src/backends/policy_engine/souffle/testdata/arcsjs_policy_rules.txt';
 
 app.post("/raksha", async function (req, res) {
