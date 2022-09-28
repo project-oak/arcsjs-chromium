@@ -1,4 +1,8 @@
-FROM node:16
+FROM gcr.io/gcp-runtimes/ubuntu_20_0_4
+
+RUN apt-get update && apt-get install -y curl
+RUN curl -s https://deb.nodesource.com/setup_16.x | bash
+RUN apt-get install nodejs -y
 
 # Create app directory
 WORKDIR /usr/src/app
