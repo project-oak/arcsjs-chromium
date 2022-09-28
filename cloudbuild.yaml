@@ -10,8 +10,13 @@ steps:
       - build
       - '--remote_cache=https://storage.googleapis.com/arcsjs-bazel-cache'
       - '--google_default_credentials'
-      - //src/...
+      - '//src/backends/policy_engine/souffle:check_policy_compliance'
     dir: raksha
+  - name: ubuntu
+    script: >-
+      cp -pr
+      /workspace/.bazel/execroot/__main__/bazel-out/k8-fastbuild/bin/src/backends/policy_engine/souffle/check_policy_compliance
+      raksha/
   - name: node
     args:
       - install
@@ -45,7 +50,5 @@ steps:
     entrypoint: gcloud
 images:
   - '${_DOCKER_IMAGE}'
-options:
-  machineType: E2_HIGHCPU_8
 substitutions:
   _DOCKER_IMAGE: 'gcr.io/arcsjs/arcsjs-chromium:latest'
