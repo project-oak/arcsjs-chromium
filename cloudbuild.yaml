@@ -15,7 +15,7 @@ steps:
   - name: ubuntu
     script: >-
       cp -pr
-      /workspace/.bazel/execroot/__main__/bazel-out/k8-fastbuild/bin/src/backends/policy_engine/souffle/check_policy_compliance
+      raksha/blaze-bin/src/backends/policy_engine/souffle/check_policy_compliance
       raksha/
   - name: node
     args:
