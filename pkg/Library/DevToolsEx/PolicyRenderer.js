@@ -13,15 +13,23 @@
   },
 
   render(inputs, state) {
+    log("Invalid " + !state.policy.valid + " valid " + state.policy.valid);
     return {
-      policy: state.policy,
-      jsonPolicy: {foo: 42, bar: 20}
+      policy: state.policy.ir,
+      jsonPolicy: {foo: 42, bar: 20},
+      invalid: ""+!state.policy.valid,
+      valid: ""+state.policy.valid
     }
   },
 
   get template() {
     return html`
+      <style>
+        [display="false"] { display: none }
+      </style>
 <div>
+  <div style="background-color: red;width: 100%;color:black" display$="{{invalid}}">Policy is Invalid</div>
+  <div style="background-color: green;width: 100%;color:black" display$="{{valid}}">Policy is Valid</div>
   <pre>{{policy}}</pre>
 </div>`;
   }

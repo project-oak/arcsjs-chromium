@@ -16,23 +16,27 @@ export const QuillFontPickerRecipe = {
   $stores: {
     fonts: {
       $type: `[Key]`,
-      $tags: ['simple']
+      $tags: ['private']
     },
     pickedFont: {
-      $type: `FontKey`
+      $type: `FontKey`,
+      $tags: ['public']
     },
     suggested: {
       $type: `[Key]`,
+      $tags: ['public']
     },
-    baz: {
-      $type: '[String]',
-      value: 10
+    downgrade_intent: {
+      $type: 'Intent',
+      $tags: [],
+      $value: [],
     }
   },
 
   main: {
     $kind: "$local/../../quill/Library/QuillFontPicker",
     $inputs: ['fonts', 'suggested'],
-    $outputs: ['pickedFont'],
+    $outputs: ['pickedFont', 'downgrade_intent'],
+    $events: {'onFontClick': ['private', 'public']}
   },
  };

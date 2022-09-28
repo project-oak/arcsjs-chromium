@@ -11,14 +11,14 @@ export const SimpleRecipe = {
     description: 'A very simple recipe',
   },
   $stores: {
-    public_texts: {
+    private_texts: {
       $type: '[Text]',
-      $tags: ['public'],
+      $tags: ['private'],
       $value: [],
     },
-    ignored_data: {
-      $type: '[Text]',
-      // $tags: ['public'],
+    downgrade_intent: {
+      $type: 'Intent',
+      $tags: [],
       $value: [],
     },
     output: {
@@ -28,13 +28,14 @@ export const SimpleRecipe = {
     }
   },
   exfil_particle: {
-    $kind: './Library/ExfilParticle',
+    $kind: './Library/ExfilWithConsentParticle',
     $inputs: [
-      {bar: 'public_texts'},
-      {foo: 'ignored_data'},
+      {secrets: 'private_texts'}
     ],
     $outputs: [
-      {baz: 'output'},
+      {share: 'output'},
+      {intent: 'downgrade_intent'},
     ],
-  }
+    $events: {'onClick': ['private', 'public']}
+  },
 };

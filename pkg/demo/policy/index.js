@@ -44,8 +44,16 @@ class SimplePassingApp extends App {
 
   onservice(user, host, {msg, data}) {
     switch (msg) {
-      case 'currentPolicy':
-        return new PolicyGenerator(this.userAssembly[0], "Chooser").recipeToPolicy();
+      case 'currentPolicyIr':
+        const ir = new PolicyGenerator(this.userAssembly[0], "Chooser").recipeToIr();
+        fetch('/raksha', {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: ir
+        });
+        return ir;
     }
     ;
   }

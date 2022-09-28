@@ -10,13 +10,14 @@
 export const SimpleRecipeIr = `
 module m0 {
   block b0 {
-    %0 = arcsjs.create_store[name: "SimpleRecipe.public_texts",type: "[Text]"]()
-    %1 = arcsjs.create_store[name: "SimpleRecipe.ignored_data",type: "[Text]"]()
+    %0 = arcsjs.create_store[name: "SimpleRecipe.public",type: "[Text]"]()
+    %1 = arcsjs.create_store[name: "SimpleRecipe.private",type: "[Text]"]()
     %2 = arcsjs.create_store[name: "SimpleRecipe.output",type: "[Text]"]()
     %3 = sql.tag_transform[rule_name: "set_public"](%0)
-    %4 = sql.tag_transform[rule_name: "set_public"](%2)
-    %5 = arcsjs.particle[name: "SimpleRecipe.exfil_particle",input_0: "bar",input_1: "foo"](%3,%1)
-    %6 = sql.sql_output[handle_name: "baz"](%5)
+    %4 = sql.tag_transform[rule_name: "set_restricted"](%2)
+    %5 = arcsjs.particle[name: "SimpleRecipe.exfil_particle",input_0: "bar",input_1: "foo"](%3,%4)
+    %6 = arcsjs.user_consent_to_downgrade[downgrade_from: "private", downgrade_to: "public"](%5)
+    %7 = sql.sql_output[handle_name: "baz"](%6)
   }
 }
 `;
