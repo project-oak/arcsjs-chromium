@@ -10,12 +10,18 @@ steps:
       - build
       - '--remote_cache=https://storage.googleapis.com/arcsjs-bazel-cache'
       - '--google_default_credentials'
-      - //src/...
+      - '//src/backends/policy_engine/souffle:check_policy_compliance'
     dir: raksha
-  - name: node
-    args:
-      - install
-    entrypoint: npm
+  - name: ubuntu
+    script: >-
+      cp -pr
+      raksha/bazel-bin/src/backends/policy_engine/souffle/check_policy_compliance
+      raksha/
+  # Pull most recent Docker image.   
+  - id: 'pull-image'
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['pull', '${_DOCKER_IMAGE}']
+
   - name: gcr.io/cloud-builders/docker
     args:
       - build
@@ -36,6 +42,8 @@ steps:
       - run
       - deploy
       - arcsjs-chromium
+      - '--project'
+      - arcsjs
       - '--image'
       - '${_DOCKER_IMAGE}'
       - '--region'
@@ -45,7 +53,5 @@ steps:
     entrypoint: gcloud
 images:
   - '${_DOCKER_IMAGE}'
-options:
-  machineType: E2_HIGHCPU_8
 substitutions:
   _DOCKER_IMAGE: 'gcr.io/arcsjs/arcsjs-chromium:latest'
