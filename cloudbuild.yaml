@@ -1,0 +1,51 @@
+steps:
+  - name: gcr.io/cloud-builders/git
+    args:
+      - clone
+      - 'https://github.com/google-research/raksha.git'
+  - name: ubuntu
+    script: cp .bazelrc-docker raksha/.bazelrc
+  - name: gcr.io/cloud-builders/bazel
+    args:
+      - build
+      - '--remote_cache=https://storage.googleapis.com/arcsjs-bazel-cache'
+      - '--google_default_credentials'
+      - //src/...
+    dir: raksha
+  - name: node
+    args:
+      - install
+    entrypoint: npm
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - '--network=cloudbuild'
+      - '--cache-from=${_DOCKER_IMAGE}'
+      - '--tag=${_DOCKER_IMAGE}'
+      - .
+    id: build-image
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - '${_DOCKER_IMAGE}'
+    id: push-image
+    waitFor:
+      - build-image
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    args:
+      - run
+      - deploy
+      - arcsjs-chromium
+      - '--image'
+      - '${_DOCKER_IMAGE}'
+      - '--region'
+      - us-central1
+      - '--platform'
+      - managed
+    entrypoint: gcloud
+images:
+  - '${_DOCKER_IMAGE}'
+options:
+  machineType: E2_HIGHCPU_8
+substitutions:
+  _DOCKER_IMAGE: 'gcr.io/arcsjs/arcsjs-chromium:latest'
