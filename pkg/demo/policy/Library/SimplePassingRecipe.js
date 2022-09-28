@@ -20,17 +20,22 @@ export const SimplePassingRecipe = {
     },
     public: {
       $tags: ['public'],
+      $type: 'String',
       $value: 'PublicData'
     },
     output: {
       $type: 'String',
+    },
+    intent: {
+      $type: 'String'
     }
   },
   main: {
     $kind: '$local/SimplePassingParticle',
     $inputs: ['private', 'public'],
-    $outputs: ['output'],
+    $outputs: ['output', 'intent'],
     // handler_name -> [tag -> downgraded-tag]
+    // arcsjs.user_consent_to_downgrade[from: 'private', to: 'public']
     $events: {'onClick': ['private', 'public']}
   }
 };

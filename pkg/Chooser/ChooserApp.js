@@ -22,13 +22,25 @@ export const ChooserApp = class extends App {
     await App.Arcs.addAssembly(assembly, 'user');
   }
 
-  onservice(user, host, {msg, data}) {
+  async onservice(user, host, {msg, data}) {
     switch (msg) {
       case 'currentPolicy':
         return new PolicyGenerator(this.userAssembly[0], "Chooser").recipeToPolicy();
-      case 'currentPolicyIr':
-        return new PolicyGenerator(this.userAssembly[0], "Chooser").recipeToIr();
+      case 'currentPolicyIr': {
+        const ir = new PolicyGenerator(this.userAssembly[0], "Chooser").recipeToIr();
+        const result = await fetch('/raksha', {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: ir
+        });
+        const code = await result.text();
+        return {
+          ir: ir,
+          valid: code.trim() == "0"
+        }
+      }
     }
-    ;
   }
 }
