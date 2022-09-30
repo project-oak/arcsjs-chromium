@@ -17,10 +17,11 @@ steps:
       cp -pr
       raksha/bazel-bin/src/backends/policy_engine/souffle/check_policy_compliance
       raksha/
-  - name: node
-    args:
-      - install
-    entrypoint: npm
+  # Pull most recent Docker image.   
+  - id: 'pull-image'
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['pull', '${_DOCKER_IMAGE}']
+
   - name: gcr.io/cloud-builders/docker
     args:
       - build
