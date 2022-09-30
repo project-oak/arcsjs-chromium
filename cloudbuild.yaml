@@ -41,6 +41,8 @@ steps:
       - run
       - deploy
       - arcsjs-chromium
+      - '--project'
+      - arcsjs
       - '--image'
       - '${_DOCKER_IMAGE}'
       - '--region'
