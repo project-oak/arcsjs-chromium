@@ -17,6 +17,12 @@ steps:
       cp -pr
       raksha/bazel-bin/src/backends/policy_engine/souffle/check_policy_compliance
       raksha/
+  - name: ubuntu
+    script: >-
+      cp -pr
+      raksha/src/backends/policy_engine/souffle/testdata/arcsjs_policy_rules.txt
+      raksha/    
+  
   # Pull most recent Docker image.   
   - id: 'pull-image'
     name: 'gcr.io/cloud-builders/docker'
