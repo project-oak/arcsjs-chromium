@@ -1,5 +1,8 @@
 .git
 node_modules
 npm-debug.log
-raksha
+raksha/src
+raksha/bazel-bin
+raksha/bazel-out
+raksha/bazel-gen
 Dockerfile
