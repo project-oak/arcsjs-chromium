@@ -1,0 +1,1 @@
+export const HARNESS_ID = "arcs__harness__id";
