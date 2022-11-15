@@ -10,7 +10,6 @@ const app = express();
 
 app.use(express.static("pkg"));
 app.use(bodyParser.text({ type: 'text/plain' }));
-app.use(cors());
 
 app.get("/", function (req, res) {
   res.redirect("/demo/quill/index.html");
@@ -19,7 +18,7 @@ app.get("/", function (req, res) {
 const RAKSHA_BINARY = '/usr/src/app/raksha/check_policy_compliance';
 const RAKSHA_POLICY = '/usr/src/app/raksha/arcsjs_policy_rules.txt';
 
-app.post("/raksha", async function (req, res) {
+app.post("/raksha", cors(), async function (req, res) {
     const data = req.body;
     tmp.file(function (err, path, fd, cleanup) {
       if (err) throw err;
