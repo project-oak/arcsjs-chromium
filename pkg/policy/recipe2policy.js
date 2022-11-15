@@ -244,11 +244,26 @@ export class PolicyGenerator {
   constructor(recipe, name) {
     this.nextId = 0;
     this.recipeName = name;
-    this.recipe = recipe;
-    this.$particles = Object.entries(recipe)
+    this.recipe = this.maybeMerge(recipe);
+    this.$particles = Object.entries(this.recipe)
         .filter(([key, value]) => !!value.$inputs);
     this.usedOps = new Set();
 
+  }
+
+  maybeMerge(recipes) {
+    if (!Array.isArray(recipes)) {
+      return recipes;
+    }
+
+    let mergedRecipe = recipes.shift();
+    for (const recipe of recipes) {
+      const particles = Object.entries(recipe)
+          .filter(([key, value]) => !!value.$inputs);
+      mergedRecipe.$stores = {...mergedRecipe.$stores, ...recipe.$stores};
+      mergedRecipe = {...mergedRecipe, ...particles};
+    }
+    return mergedRecipe;
   }
 
   addUsedOp(name) {
