@@ -109,25 +109,35 @@ class PublicOp extends Operation {
 
 class PrivateOp extends Operation {
   constructor(generator, inputId) {
-    super(generator, 'sql.tag_transform', [new Input(inputId)], [
-          new Attribute('rule_name', STRING, "set_private")
+    super(generator, 'arcsjs.claim', [new Input(inputId)], [
+          new Attribute('tag', STRING, "private")
         ]
     );
   }
 }
 
-class SelectFieldOp extends Operation {
-  constructor(generator, handleName, inputId) {
-    super(generator, 'arcsjs.select_field', [new Input(inputId)],
+class ConnectInputOp extends Operation {
+  constructor(generator, handleName, inputId, storeId) {
+    super(generator, 'arcsjs.connect_input', [new Input(inputId), new Input(storeId)],
         [
           new Attribute('name', STRING, handleName)
         ]);
   }
 }
 
+class ConnectOutputOp extends Operation {
+  constructor(generator, handleName, inputId, storeId) {
+    super(generator, 'arcsjs.connect_output', [new Input(inputId), new Input(storeId)],
+        [
+          new Attribute('name', STRING, handleName)
+        ]);
+    this.storeId = storeId;
+  }
+}
+
 class OutputOp extends Operation {
   constructor(generator, handleName, inputIds) {
-    super(generator, 'arcsjs.arcsjs_output',
+    super(generator, 'arcsjs.make_public',
         inputIds.map(inputId => new Input(inputId)),
         [
         ]);
@@ -196,17 +206,21 @@ class Particle extends Operation {
         (binding, index) => new Attribute("input_" + index, STRING,
             binding.bindingName));
 
-    super(generator, "arcsjs.particle", [...inputs], [
-      new Attribute("name", STRING, `${generator.recipeName}.${particleName}`),
-      ...inputAttributes
+    super(generator, "arcsjs.particle", [], [
+      new Attribute("name", STRING, `${generator.recipeName}.${particleName}`)
     ]);
 
     this.particleName = particleName;
     this.$particle = $particle;
     this.storeMap = stores;
     this.bindingMap = bindingMap;
+    this.input = inputBindings.map(
+        binding => new ConnectInputOp(generator, binding.bindingName, this.id,
+            binding.store.id));
+
     this.output = this.outputBindings().map(
-        binding => new SelectFieldOp(generator, binding.bindingName, this.id));
+        binding => new ConnectOutputOp(generator, binding.bindingName, this.id,
+            binding.store.id));
     this.downgrades = Object.entries($particle.$events || {}).map(
         ([eventName, downgradeConfig]) => new UserAction(generator,
             downgradeConfig[0], downgradeConfig[1],
@@ -255,15 +269,14 @@ export class PolicyGenerator {
     if (!Array.isArray(recipes)) {
       return recipes;
     }
-
-    let mergedRecipe = recipes.shift();
+    let merged = {};
     for (const recipe of recipes) {
-      const particles = Object.entries(recipe)
-          .filter(([key, value]) => !!value.$inputs);
-      mergedRecipe.$stores = {...mergedRecipe.$stores, ...recipe.$stores};
-      mergedRecipe = {...mergedRecipe, ...particles};
+      const {$stores, $meta, ...particles} = recipe;
+      merged.$meta ??= $meta;
+      merged.$stores = {...merged.$stores, ...$stores}
+      merged = {...merged, ...particles};
     }
-    return mergedRecipe;
+    return merged;
   }
 
   addUsedOp(name) {
@@ -292,17 +305,19 @@ export class PolicyGenerator {
     const allPrivateOps = particles.flatMap(
         particle => particle.privateBindings()).map(binding => binding.op);
 
-    const allSelectFieldOps = particles.flatMap(particle => particle.output);
+    const allConnectOutputOps = particles.flatMap(particle => particle.output);
+    const allConnectInputOps = particles.flatMap(particle => particle.input);
 
     const downgradeOps = particles.flatMap(particle => particle.downgradeOps());
+
     const outputOp = new OutputOp(this, "out",
         downgradeOps.map(op => op.id).concat(
             particles.filter(particle => !particle.hasDowngrades()).flatMap(
-                p => p.output).map(p => p.id)));
+                p => p.output).map(p => p.storeId)));
 
     const allOps = allReferencedStores.concat(allPrivateOps).concat(
-        particles).concat(allSelectFieldOps).concat(downgradeOps).concat(
-        outputOp).map(op => output(op));
+        particles).concat(allConnectInputOps).concat(allConnectOutputOps)
+        .concat(downgradeOps).concat(outputOp).map(op => output(op));
 
     return allOps;
   }
