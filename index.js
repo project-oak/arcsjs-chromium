@@ -1,4 +1,6 @@
+
 import express from "express";
+import cors from 'cors';
 import bodyParser from "body-parser";
 import fs from "fs";
 import tmp from "tmp";
@@ -8,6 +10,7 @@ const app = express();
 
 app.use(express.static("pkg"));
 app.use(bodyParser.text({ type: 'text/plain' }));
+app.use(cors());
 
 app.get("/", function (req, res) {
   res.redirect("/demo/quill/index.html");
