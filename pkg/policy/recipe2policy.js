@@ -117,21 +117,22 @@ class PrivateOp extends Operation {
 }
 
 class ConnectInputOp extends Operation {
-  constructor(generator, handleName, inputId, storeId) {
-    super(generator, 'arcsjs.connect_input', [new Input(inputId), new Input(storeId)],
+  constructor(generator, handleName, inputId, store) {
+    super(generator, 'arcsjs.connect_input', [new Input(inputId), new Input(store.id)],
         [
           new Attribute('name', STRING, handleName)
         ]);
+    this.store = store;
   }
 }
 
 class ConnectOutputOp extends Operation {
-  constructor(generator, handleName, inputId, storeId) {
-    super(generator, 'arcsjs.connect_output', [new Input(inputId), new Input(storeId)],
+  constructor(generator, handleName, inputId, store) {
+    super(generator, 'arcsjs.connect_output', [new Input(inputId), new Input(store.id)],
         [
           new Attribute('name', STRING, handleName)
         ]);
-    this.storeId = storeId;
+    this.store = store;
   }
 }
 
@@ -216,11 +217,11 @@ class Particle extends Operation {
     this.bindingMap = bindingMap;
     this.input = inputBindings.map(
         binding => new ConnectInputOp(generator, binding.bindingName, this.id,
-            binding.store.id));
+            binding.store));
 
     this.output = this.outputBindings().map(
         binding => new ConnectOutputOp(generator, binding.bindingName, this.id,
-            binding.store.id));
+            binding.store));
     this.downgrades = Object.entries($particle.$events || {}).map(
         ([eventName, downgradeConfig]) => new UserAction(generator,
             downgradeConfig[0], downgradeConfig[1],
@@ -310,10 +311,12 @@ export class PolicyGenerator {
 
     const downgradeOps = particles.flatMap(particle => particle.downgradeOps());
 
-    const outputOp = new OutputOp(this, "out",
+    const outputOp =
         downgradeOps.map(op => op.id).concat(
             particles.filter(particle => !particle.hasDowngrades()).flatMap(
-                p => p.output).map(p => p.storeId)));
+                p => p.output).filter(o => o.store.isPublicStore())
+                .map(p => p.store.id)).map(id =>
+            new OutputOp(this, "out", [id]));
 
     const allOps = allReferencedStores.concat(allPrivateOps).concat(
         particles).concat(allConnectInputOps).concat(allConnectOutputOps)

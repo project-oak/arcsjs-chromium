@@ -92,7 +92,8 @@ export const ArrayOfRecipe = [{
       "$value": 30
     },
     "CameraNode1:frame": {
-      "$type": "Image"
+      "$type": "Image",
+      $tags: ['private']
     }
   }
 }, {
@@ -121,8 +122,9 @@ export const ArrayOfRecipe = [{
     "ImageNode1:image": {
       "$type": "Image",
       "$value": {
-        "url": "https://storage.googleapis.com/tfweb/testpics/strawberry2.jpeg"
-      }
+        "url": "https://storage.googleapis.com/tfweb/testpics/strawberry2.jpeg",
+      },
+      $tags: ['public']
     }
   }
 }]
