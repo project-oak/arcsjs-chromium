@@ -32,7 +32,6 @@ app.post("/raksha", cors(), async function (req, res) {
         const result = err ? 1 : 0;
         console.log(stdout);
         console.log(stderr);
-        res.sendStatus(200);
         if (req.query.json) {
           res.json({result, stdout, stderr}); 
         } else {
