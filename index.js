@@ -29,10 +29,14 @@ app.post("/raksha", cors(), async function (req, res) {
       });
       exec(`${RAKSHA_BINARY} --ir ${path} --sql_policy_rules=${RAKSHA_POLICY} --policy_engine=`,
           async (err, stdout, stderr) => {
-        if (err) { console.error(err); res.send("1"); } else {
-          res.send("0");
-        }
+        const result = err ? 1 : 0;
         console.log(stdout);
+        console.log(stderr);
+        if (req.query.json) {
+          res.json({result, stdout, stderr}); 
+        } else {
+          res.send(result); 
+        }
       });
   });
 });
