@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" style="opacity: 0;">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=0.86, maximum-scale=3.0, minimum-scale=0.86, viewport-fit=cover">
+<link rel="stylesheet" href="style.css">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Bebas+Neue&family=Comforter+Brush&display=swap');
+  #test {
+    font-family: sans-serif;
+    /*
+    font-family: 'Architects Daughter';
+    font-family: 'Bebas Neue';
+    font-family: 'Comforter';
+    */
+    font-size: 24px;
+  }
+</style>
+
+<div id="test">The quick brown fox jumped over the lazy dog, sir!</div>
+
+<hr>
+
+<!-- sliding panel -->
+<div id="chooser" chooser></div>
+
+<!-- open collating font picker in sliding panel -->
+Demo: <button id="b0" disabled onclick="onSamplePanel('FullDemo')">Full Demo</button>
+
+<!-- drop-down menu -->
+<div id="menu" menu></div>
+
+<script type="module" src="./app-full.js"></script>
+
+</html>

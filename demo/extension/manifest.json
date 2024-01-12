@@ -1,0 +1,43 @@
+{
+  "manifest_version": 2,
+  "name": "Arcs Extension",
+  "version": "0.1",
+  "browser_action": {
+    "default_icon": {
+      "32": "assets/logo_32x32.png"
+    },
+    "default_title": "Open Tools",
+    "default_popup": "manifest.html"
+  },
+  "content_security_policy": "script-src 'self' 'unsafe-eval' https://arcsjs.web.app/; object-src 'self' sandbox allow-scripts; worker-src blob: https://arcsjs.web.app/;",
+//  "sandbox": {
+//    "pages": [
+//      "manifest.html"
+//    ]
+//  },
+  "background": {
+    "page": "background.html",
+    "persistent": true
+  },
+  "permissions": [
+    "scripting",
+    "activeTab",
+    "storage",
+    "tabs",
+    "http://*/",
+    "https://*/"
+  ],
+
+  "web_accessible_resources": [
+    "harness.js",
+    "conf/config.js",
+    "conf/allowlist.js",
+    "conf/allowlist-harness.js",
+    "conf/allowlist-composer.js",
+    "dom2json.js",
+    "portbus.js",
+    "remote-xen.js",
+    "webcomponents-bundle.js",
+    "constants.js"
+  ]
+}

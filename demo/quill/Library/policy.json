@@ -1,0 +1,129 @@
+{
+  "flags": {
+    "planning": false,
+    "dot": true,
+    "d3": true
+  },
+  "capabilities": [
+    ["write", "read"]
+  ],
+  "subtypes": [
+    ["any", "read"],
+    ["any", "write"],
+    ["Int", "Number"],
+    ["Int", "Serializable"],
+    ["String", "Serializable"],
+    ["Item", "{family: String, fullName: String, weight: Number, style: String}"],
+    ["Data", "{privateData: *}"],
+    ["Items", "List(Item)"],
+    ["List(Item)", "Items"],
+    ["List", "ibis.GenericType"],
+    ["List", "ibis.InductiveType"],
+    ["Key", "{item: Item, data: Data}"],
+    ["UserAction(Key)", "Key"],
+    ["Eventlet", "UserAction(Key)"],
+    ["T", "{html: String, key: Key}"],
+    ["{html: String, key: Key}", "T"]
+  ],
+  "less_private_than": [
+    ["public", "private"],
+    ["not_downstream_p_decorator", "downstream_p_decorator"],
+    ["not_downstream_p_filter", "downstream_p_filter"],
+    ["not_downstream_p_template", "downstream_p_template"],
+    ["not_downstream_p_inner_template", "downstream_p_inner_template"]
+  ],
+  "recipes": [
+    {
+      "metadata": {
+        "name": "demo"
+      },
+      "nodes": [
+        ["p_particle", "state", "any State"],
+        ["p_particle", "inputs", "write Inputs"],
+        ["p_particle", "p_event", "read Eventlet"],
+
+        ["service_map", "s_input", "read Opaque(List(Item))"],
+        ["service_map", "s_inner_write", "write {item: Item, memo: ibis.UnionType(Memo, undefined)}"],
+        ["service_aggregator", "s_inner_read", "read T"],
+        ["service_aggregator", "s_output", "write List(T)"],
+
+        ["p_decorator", "d_item", "read {item: Item, memo: ibis.UnionType(Memo, undefined)}"],
+        ["p_decorator", "d_state", "read State"],
+        ["p_decorator", "d_inputs", "read Inputs"],
+        ["p_decorator", "d_services", "read Services"],
+        ["p_decorator", "d_decorated", "write {item: Item, memo: Memo, data: Data}"],
+
+        ["p_filter", "f_state", "read State"],
+        ["p_filter", "f_candidate", "read {item: Item, memo: Memo, data: Data}"],
+        ["p_filter", "f_selected", "write {item: Item, data: Data, selected: Bool}"],
+
+        ["p_template", "t_state", "read State"],
+        ["p_template", "t_inputs", "read Inputs"],
+        ["p_template", "t_items_in", "read Opaque(List(Item))"],
+        ["p_template", "t_items_out", "write Opaque(List(Item))"],
+
+        ["p_inner_template", "it_state", "read State"],
+        ["p_inner_template", "it_inputs", "read Inputs"],
+        ["p_inner_template", "it_item", "read {item: Item, data: Data, selected: Bool}"],
+        ["p_inner_template", "it_render", "write {html: String, key: Key}"],
+
+        ["surface", "runtime_surface", "read List({html: String, key: Key})"],
+        ["surface", "surface_event", "write Key"],
+
+        ["runtime", "services", "write Services"],
+        ["runtime", "from_surface_event", "read Key"],
+        ["runtime", "runtime_event", "write Eventlet"],
+        ["runtime", "runtime_items", "write Opaque(List(Item))"]
+      ],
+      "claims": [
+        ["runtime_items", "private"],
+         ["it_render", "private"],
+        ["d_decorated", "downstream_p_decorator"],
+        ["f_selected", "downstream_p_filter"],              
+        ["surface_event", "downstream_user_action"],
+        ["runtime_event", "user_action"]
+      ],
+      "checks": [
+        ["t_render", "private"],
+        ["r_result", "public"],
+        ["d_item", "not_downstream_p_decorator"],
+        ["d_state", "not_downstream_p_decorator"],
+        ["d_inputs", "not_downstream_p_decorator"],
+        ["f_state", "not_downstream_p_filter"],
+        ["f_candidate", "not_downstream_p_filter"],
+        ["f_item", "not_downstream_p_filter"],
+        ["it_inputs", "not_downstream_p_inner_template"],
+        ["it_item", "not_downstream_p_inner_template"],
+        ["from_surface_event", "downstream_user_action"]
+      ],
+      "edges": [
+        ["inputs", "d_inputs"],
+        ["services", "d_services"],
+        ["state", "d_state"],
+
+        ["d_decorated", "f_candidate"],
+        ["state", "f_state"],
+
+        ["f_selected", "it_item"],
+        ["inputs", "it_inputs"],
+        ["state", "it_state"],
+
+        ["s_inner_write", "d_item"],
+        ["it_render", "s_inner_read"],
+
+        ["t_items_out", "s_input"],
+        ["s_output", "runtime_surface"],
+        ["inputs", "t_inputs"],
+        ["state", "t_state"],
+
+        ["runtime_event", "p_event"],
+        ["runtime_items", "t_items_in"],
+        ["surface_event", "from_surface_event"]
+      ],
+      "trusted_to_remove_tag_from_node": [
+        ["from_surface_event", "surface_event"]
+      ],
+      "trusted_to_remove_tag": []
+    }
+  ]
+}
